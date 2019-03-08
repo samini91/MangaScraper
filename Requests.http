@@ -1,0 +1,41 @@
+:url = http://localhost:8080
+
+#
+:headers = <<
+Content-Type: application/json
+#
+
+POST :url/download
+:headers
+{	
+"downloadRequestUrl" : "http://mangakatana.com/manga/berserk.1087/c0.1"
+}
+
+#
+POST :url/save
+:headers
+{
+"downloadRequestUrl" : "https://images1-focus-opensocial.googleusercontent.com/gadgets/proxy?container=focus&gadget=a&no_expand=1&resize_w=0&refresh=7200&url=http://i1.mangakatana.com/token/2814803515CquW.GRQRh1s6Io-5ssAjeBApdt24600%3A%2A4giA0IAQ%3AubAt.qj039.t%2A1yRAj%3Ac5prtWAxBsQt7EIog-p63RA-Bp%3AkJ%3ADb.ATAmglopgQALco%3AmJ1sA_/2q6x27x7k4t0h27r3j13g27n4b12p13c_0.jpg"
+}
+#
+POST :url/save
+:headers
+{
+"downloadRequestUrl" : "https://images1-focus-opensocial.googleusercontent.com/gadgets/proxy?container=focus&gadget=a&no_expand=1&resize_w=0&refresh=7200&url=http://i1.mangakatana.com/token/0319434515Y8WLUrnraJC%3A%2AbhS.tc6y1weBip0mxvkvIAb8r_1NH5ltIlqW%3Dd3gwsURgmt0n9583w8C.%3BtsvWh-Hi8MQfoEp8vP8%2At0%3ArQL7tutrAsfdgo.gGSBmz7l1cCf/2j6q27o7x4e0d27u3c13i27c4b12c13a_90.jpg"
+
+}
+#
+POST :url/grabLinks
+:headers
+{	
+	"pageLinkRequestUrl" : "http://mangakatana.com/manga/berserk.1087",
+	"mangaName" : "Berserk"
+}
+#
+
+POST :url/downloadManga
+:headers
+{	
+	"pageLinkRequestUrl" : "http://mangakatana.com/manga/stardust-memories.12102",
+	"pageLinkRequestMangaName" : "Stardust Memories"
+}
