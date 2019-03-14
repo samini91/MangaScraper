@@ -5,5 +5,8 @@ Build:
 Run:
 	stack exec MangaScraper-exe --allow-different-user
 StartSeleniumServer:
-	java -jar selenium-server-standalone-2.53.1.jar 
+	java -jar selenium-server-standalone-2.53.1.jar
+
+
+
 

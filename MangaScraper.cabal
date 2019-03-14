@@ -39,6 +39,14 @@ library
                      , directory
                      , async
                      , path
+                     , uri-encode
+                     , ghc
+                     , exceptions
+                     , lifted-base
+                     , transformers-base
+                     , monad-control
+                     , call-stack
+                     
 
                      
                      

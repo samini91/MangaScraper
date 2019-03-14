@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DataKinds       #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -24,20 +26,20 @@ import Network.Wreq
 import Text.HTML.TagSoup
 import Network.Wreq
 import qualified Data.ByteString.Lazy as B
---import Network.Curl.Download
---import Network.HTTP.Conduit (conduitManagerSettings, http, newManager, parseUrl, responseBody)
---import Text.HTML.DOM (sinkDoc)
 import Text.HTML.Scalpel
 import Test.WebDriver
+import Test.WebDriver.Exceptions (FailedCommandType(Timeout))
 import Test.WebDriver.Commands.Wait
+import Test.WebDriver.Capabilities
+import Test.WebDriver.Config
 import Control.Concurrent
 import Control.Concurrent.Async
+import Control.Exception (Exception, catch, SomeException)
 import Path 
 import Path.Internal
-
+import Scraper
 
 type PageNumber = Int
-
 data DownloadChapterRequest = DownloadChapterRequest
   {
     --downloadChapterRequestUrl :: String ,
@@ -51,7 +53,7 @@ instance ToJSON DownloadChapterRequest
 data DownloadInfo = DownloadInfo
   {
     downloadInfoUrlDump :: String,
-    downloadInfoUrl :: [(PageNumber,String)]
+    downloadInfoUrl :: [(PageNumber,Url)]
   } deriving Generic
 instance FromJSON DownloadInfo
 instance ToJSON DownloadInfo
@@ -66,9 +68,10 @@ instance ToJSON PageLinkRequest
 
 data PageLink = PageLink {
   pageLinkMangaName :: String,
-  pageLinkUrl::String ,
+  pageLinkUrl:: Url ,
   pageLinkChapterName::String
   } deriving Generic
+
 instance FromJSON PageLink
 instance ToJSON PageLink
 
@@ -84,8 +87,6 @@ api :: Servant.Proxy API
 api = Servant.Proxy
 
 server :: Server API
---server = downloadHandler :<|> saveFile' :<|> grabLinksHandler :<|> downloadMangaHandler
---server = downloadHandler :<|> grabLinksHandler :<|> downloadMangaHandler
 server = downloadMangaHandler
 
 downloadMangaHandler :: PageLinkRequest -> Handler [PageLink]
@@ -95,30 +96,30 @@ downloadMangaHandler r = liftIO $ do
 downloadManga :: PageLinkRequest -> IO [PageLink]
 downloadManga r = do
   x <- (grabLinks r)
-  l <- return (reverse x)
-  let chapters = take 2 $ zip [0..] l
+  l <- return ( (reverse x))
+  --l <- return ( take 1 $ (reverse x))
+  let chapters = zip [0..] l
   m <- return (map (\z -> DownloadChapterRequest{
                        downloadChapterRequestMangaName = pageLinkRequestMangaName r,
                        downloadChapterRequestNumber = (fst z) ,
                        downloadChapterRequestLink = (snd z)}) chapters)
-  downloadAll m
+  --downloadAll m
+  downloadAllm m
   return l
   where
-    --downloadAll x = mapM download x
-    --downloadAll x = mapConcurrently download x -- this uses too much memory 
+    downloadAllm x = mapM download x
+    --downloadAllm x = mapConcurrently download x -- this uses too much memory 
 
 grabLinksHandler :: PageLinkRequest -> Handler [PageLink]
 grabLinksHandler r = liftIO $ grabLinks r
 
 grabLinks :: PageLinkRequest -> IO [PageLink]
 grabLinks r = do
-  z <- grabPage (pageLinkRequestUrl r)
+  z <- grabPageWithRetry (sanatizeUrl $ pageLinkRequestUrl r)
+  --z <- test (sanatizeUrl $ pageLinkRequestUrl r)
   let strHtml = T.unpack z
   m <- return (parseChapters (parseTags strHtml))
-  return (map (\x -> PageLink{ pageLinkUrl = (fst x) , pageLinkChapterName = (snd x), pageLinkMangaName = pageLinkRequestMangaName r}) m)
-
---downloadHandler :: DownloadChapterRequest -> Handler DownloadInfo
---downloadHandler u = liftIO $ download u
+  return (map (\x -> PageLink{ pageLinkUrl = (sanatizeUrl (fst x)) , pageLinkChapterName = (snd x), pageLinkMangaName = pageLinkRequestMangaName r}) m)
 
 mangaFilePath :: String -> String -> Maybe (Path Rel Dir)
 mangaFilePath a b = do
@@ -129,15 +130,16 @@ mangaFilePath a b = do
 
 download :: DownloadChapterRequest -> IO DownloadInfo
 download u = do
-  z <- grabPage link -- this opens a new chrome instance for each request which seems like a bad idea in hindsight
+  z <- grabPageWithRetry link
   let strHtml = T.unpack z
   x <-  return (parseImagesFromString (parseTags strHtml))
-  m <- (saveFiles (downloadInfoUrl x))
+  forkIO ((\x -> ()) <$> (saveFiles (downloadInfoUrl x)))
+  --(saveFiles (downloadInfoUrl x))
   return (DownloadInfo {downloadInfoUrlDump = "", downloadInfoUrl = (downloadInfoUrl x)})
   where
       filePath = mangaFilePath (downloadChapterRequestMangaName u) chapterNumber 
       saveWithPath = saveFile (filePath)
-      saveFiles y = mapM saveWithPath (filter (\x -> snd x /="")  y) -- filter on maybe nothihng instead or something to that effect ... pass in only valid paths to the save file method
+      saveFiles y = mapM saveWithPath (filter (\x -> urlValue (snd x) /= "http://")  y) 
       chapterNumber = show (downloadChapterRequestNumber u) ++ "_" ++ (pageLinkChapterName (downloadChapterRequestLink u))
       link = (pageLinkUrl (downloadChapterRequestLink u))
       second z = case z of [] -> []
@@ -156,7 +158,7 @@ downloadAll u = do
     mapPages z = mapM htmlDownloadInfo z
     filePath u = mangaFilePath (downloadChapterRequestMangaName u) (chapterNumber u)
     saveWithPath u = saveFile (filePath u)
-    saveFiles u y = mapM (saveWithPath u) (filter (\x -> snd x /="")  y) 
+    saveFiles u y = mapM (saveWithPath u) (filter (\x -> (urlValue (snd x)) /=  "http://" )  y) 
     chapterNumber u = show (downloadChapterRequestNumber u) ++ "_" ++ (pageLinkChapterName (downloadChapterRequestLink u))
     
 
@@ -166,12 +168,10 @@ htmlDownloadInfo z = do
   z <- return (parseImagesFromString (parseTags y))
   --(saveFiles (downloadInfoUrl z))
   return z
-  
 
-
-saveFile :: Maybe(Path Rel Dir)-> (PageNumber, String) -> IO FilePath -- pass in the path instead 
+saveFile :: Maybe(Path Rel Dir)-> (PageNumber, Url) -> IO FilePath -- pass in the path instead 
 saveFile p x = do
-  m <- get (snd x)
+  m <- get (urlValue $ snd x)
   let z = (m ^. responseBody)
   createDirectoryIfMissing True filePath -- get string representation here return FilePath of "" if maybe is empty
   B.writeFile fileName z
@@ -198,33 +198,43 @@ parseChapters tags = scrapeChapters
 parseImagesFromString :: [Tag String] -> DownloadInfo
 parseImagesFromString tags = do
   let x = scrapeImages
-  DownloadInfo {downloadInfoUrlDump = (Data.List.intercalate "   " x), downloadInfoUrl = scrapeImagesWithPageNumber}
+  --DownloadInfo {downloadInfoUrlDump = (Data.List.intercalate "   " (urlValue x) ), downloadInfoUrl = scrapeImagesWithPageNumber}
+  DownloadInfo {downloadInfoUrlDump = "", downloadInfoUrl = scrapeImagesWithPageNumber}
   where
     s = scrape (attrs "data-src" "img") tags
     scrapeImagesWithPageNumber = ( zip [0..] scrapeImages)  
-    scrapeImages = case s of Just a -> a
+    scrapeImages = case s of Just a -> sanatizeUrl <$> a
                              Nothing -> []
 
 
-grabPage :: String -> IO T.Text
-grabPage x = runSession chromeConfig $ do
-  openPage x                           
-  m <- getSource                       
-  closeSession                         
-  return m
-  where
-    chromeConfig = useBrowser chrome defaultConfig
-
-grabPages :: [String] -> IO [T.Text]
+grabPages :: [Url] -> IO [T.Text]
 grabPages x = runSession chromeConfig $ do
   z <- mapM openAndGetSource x
   closeSession                         
   return z
   where
     chromeConfig = useBrowser chrome defaultConfig
-    openAndGetSource x = do openPage x
+    openAndGetSource x = do openPage (urlValue x)
                             getSource
-                              
     
-    
-    
+grabPageWithRetry :: Url -> IO T.Text
+grabPageWithRetry x = runSession chromeConfig $
+  do
+    onTimeout (grabPage x)(liftIO $ grabPageWithRetry x)
+  where
+    chromeConfig = useBrowser chrome defaultConfig
+
+grabPage :: Url -> WD T.Text
+grabPage x =
+  do
+    setPageLoadTimeout 10000 
+    openPage $ urlValue x
+    m <- getSource
+    closeSession
+    return m
+  where
+    chromeConfig = useBrowser chrome config
+    config = defaultConfig{wdCapabilities = caps}
+    --caps = allCaps {additionalCaps = [("pageLoadStrategy","none")]}
+    caps = allCaps {additionalCaps = [("pageLoadStrategy","eager")]}
+  

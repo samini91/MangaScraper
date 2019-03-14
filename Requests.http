@@ -39,3 +39,10 @@ POST :url/downloadManga
 	"pageLinkRequestUrl" : "http://mangakatana.com/manga/stardust-memories.12102",
 	"pageLinkRequestMangaName" : "Stardust Memories"
 }
+#
+POST :url/downloadManga
+:headers
+{	
+	"pageLinkRequestUrl" : "http://mangakatana.com/manga/hero-i-quit-a-long-time-ago.19965",
+	"pageLinkRequestMangaName" : "Hero I Quit a Long Time Ago"
+}
