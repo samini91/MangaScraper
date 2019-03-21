@@ -4,104 +4,89 @@
 
 module Scraper
     (
-      sanatizeUrl,
-      Url(),
-      urlValue,
       donTimeout,
-      zc
+      grabPageWithRetry,
+      parseChapters,
+      grabPages,
+      grabPage
     ) where
 
---import Path (mkAbsDir, mkRelDir, (</>))
-import Data.Aeson
+import qualified Data.Text as T
 import Data.List
-import GHC.Generics
 import Path 
 import Path.Internal 
 import Control.Monad.IO.Class (liftIO)
-import Network.URI.Encode
-import           Control.Exception (Exception)
-import           Control.Monad
-import           Control.Monad.Catch (MonadThrow(..))
-import Exception
-
+import Control.Monad
+import Control.Applicative
 import Control.Concurrent
 import Control.Exception (SomeException)
 import Control.Exception.Lifted
 import Control.Monad.Base
 import Control.Monad.Trans.Control
 import Data.CallStack
-import qualified Data.Foldable as F
-import Data.Text (Text)
-import Data.Typeable
-
-import Test.WebDriver.Commands
-import Test.WebDriver.Class
-import Test.WebDriver.Exceptions
-import Test.WebDriver.Session
-
-z:: Maybe (Path Rel Dir)
-z = (parseRelDir "asdf") >>= (\x -> parseRelDir "asdasdff")  
-
-cc:: String -> String -> Maybe (Path Rel Dir)
-cc a b = do
-  z <- (parseRelDir a) 
-  y <- (parseRelDir b)
-  return (z </> y)
-
-a :: String -> Maybe(String)
-a s = do
-  return s
-
-m = a >> a
-
---e = encode "\\eifjna.com"
-
-newtype Url = Url {urlValue :: String} deriving (Show,Eq ,Generic)
-instance FromJSON Url
-instance ToJSON Url
-
-data BadUrl = BadUrl String deriving (Show, Eq)
-instance Exception BadUrl
+import Test.WebDriver
+import Test.WebDriver.Exceptions (FailedCommandType(Timeout))
+import Test.WebDriver.Commands.Wait
+import Test.WebDriver.Capabilities
+import Test.WebDriver.Config
+import Text.HTML.TagSoup
+import Text.HTML.Scalpel
+import ScraperData
 
 
--- //file-image.mpcdn.net/9482/149950/1.jpg
-
-parseUrl :: MonadThrow m
-            => String -> m (Url)
-
-parseUrl s =
-  if (=="/") s -- can use regex here
-     then return (Url s)
-     else throwM (BadUrl s)
-
-sanatizeUrl :: String -> Url 
-sanatizeUrl s =
-  if (startsWithhttp || startsWithhttps)
-  then Url sanatized
-  else Url $ "http://" ++ sanatized
-  where
-    sanatized = dropWhile (=='/') s
-    startsWithhttp = isPrefixOf "http://" s
-    startsWithhttps = isPrefixOf  "https://" s
-    
-    
-
-ze = Url "//asefqasdf"
-
---zc = sanatizeUrl "http://file-image.mpcdn.net/9482/149950/1.jpg"
-zc = sanatizeUrl "http:g//"
-
-asdf = sanatizeUrl 
-
-
+--parseUrl :: MonadThrow m => String -> m (Url)
+--parseUrl s =
+--  if (=="/") s -- can use regex here
+--     then return (Url s)
+--     else throwM (BadUrl s)
 
 donTimeout :: (MonadBaseControl IO m, HasCallStack) => m a -> m a -> m a
 donTimeout m r = m `Control.Exception.Lifted.catch` handler
   where
-    --handler (SomeException z) = r
     handler (SomeException e) = r 
-    --handler (FailedCommand _ _) = r
-    --handler (TimeoutException) = r
+
+parseChapters :: [Tag String] -> [(String,String)]
+parseChapters tags = scrapeChapters
+  where
+    s =  (scrape scraper tags)
+    scraper = chroots(("div" @: [hasClass "chapters"]) // ("div" @: [hasClass "chapter"] )) $ do
+      x <- (Text.HTML.Scalpel.attr "href" "a") 
+      y <- (text $ "a")
+      return (x, y)
+    scrapeChapters = case s of Just a -> a
+                               Nothing -> []
+
+
+
+grabPages :: [Url] -> IO [T.Text]
+grabPages x = runSession chromeConfig $ do
+  z <- Prelude.mapM openAndGetSource x
+  closeSession                         
+  return z
+  where
+    chromeConfig = useBrowser chrome defaultConfig
+    openAndGetSource x = do openPage (urlValue x)
+                            getSource
     
-  
-      --handler other = Control.Exception.Lifted.throwIO other
+
+grabPageWithRetry :: [Url] -> IO [T.Text]
+grabPageWithRetry x =  mapRetry
+  where
+    mapRetry = (\y -> runSession chromeConfig (onTimeout(grabPage y)(closeSession >> return ""))) `mapM` x -- need to take a specific amount only 
+    chromeConfig = useBrowser chrome defaultConfig
+    --retry r = do closeSession
+                   --liftIO $ grabPageWithRetry [r]
+
+grabPage :: Url -> WD T.Text
+grabPage x =
+  do
+    setPageLoadTimeout 10000 
+    openPage $ urlValue x
+    m <- getSource
+    closeSession
+    return m
+  where
+    chromeConfig = useBrowser chrome config
+    config = defaultConfig{wdCapabilities = caps}
+    caps = allCaps {additionalCaps = [("pageLoadStrategy","none")]}
+    --caps = allCaps {additionalCaps = [("pageLoadStrategy","eager")]}
