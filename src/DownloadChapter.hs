@@ -44,10 +44,11 @@ import qualified Data.ByteString.Lazy as B
 
 download :: DownloadChapterRequest -> IO DownloadInfo
 download u = do
-  z <- grabPageWithRetry $ [link]
-  let strHtml = T.unpack $ listDefault $ take 1 $ takeWhile (\x -> x /= "") (cycle z)
+  m <- grabPageRemoveRedundancy $ getMangaWebSiteUrl <$> cycle([link]) -- why doesnt this work?
+  let z = snd $ m
+  let strHtml = T.unpack $ z
   x <-  return (parseImagesFromString (parseTags strHtml))
-  _ <- forkIO ((\dInfo -> ()) <$> (saveFiles (downloadInfoUrl x)))
+  _ <- forkIO ((\dInfo -> ()) <$> (saveFiles (downloadInfoUrl x))) -- there is probably a better way to do this
   return (DownloadInfo {downloadInfoUrl = (downloadInfoUrl x)})
   where
       filePath = mangaFilePath (downloadChapterRequestMangaName u) chapterNumber 
@@ -56,14 +57,14 @@ download u = do
       chapterNumber = show (downloadChapterRequestNumber u) ++ "_" ++ (pageLinkChapterName (downloadChapterRequestLink u))
       link = (pageLinkUrl (downloadChapterRequestLink u))
       listDefault a = case a of [] -> ""
-                                (h:tail) -> h
+                                (h:_) -> h
       second z = case z of [] -> []
                            (h:tail) -> (snd h) : second tail
 
 
 downloadAll :: [DownloadChapterRequest] -> IO [DownloadInfo]
 downloadAll u = do
-  z <- liftIO $ grabPages links
+  z <- liftIO $ grabPages $ getMangaWebSiteUrl <$> links
   e <- mapPages z
   let q = zip u e
   m <- Prelude.mapM (\x -> saveFiles (fst x) (downloadInfoUrl (snd x))) q
@@ -94,6 +95,7 @@ saveFile p x = do
 groupPageDownloads :: Int -> [DownloadChapterRequest] -> [[DownloadChapterRequest]]
 groupPageDownloads a [] =  []
 groupPageDownloads a m = [take a m] ++ (groupPageDownloads a $ drop a m)
+
 
 parseImagesFromString :: [Tag String] -> DownloadInfo
 parseImagesFromString tags = do

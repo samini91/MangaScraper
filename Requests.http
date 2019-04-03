@@ -36,7 +36,7 @@ POST :url/grabLinks
 POST :url/downloadManga
 :headers
 {	
-	"pageLinkRequestUrl" : "http://mangakatana.com/manga/stardust-memories.12102",
+	"pageLinkRequestUrl" : ["http://mangakatana.com/manga/stardust-memories.12102"],
 	"pageLinkRequestMangaName" : "Stardust Memories"
 }
 

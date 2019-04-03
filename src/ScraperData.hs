@@ -2,8 +2,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 module ScraperData
   (
-    WebSite(),
-    getWebSite,
+    MangaWebSite(),
+    getMangaWebSite,
+    getMangaWebSiteUrl,
+    getMangaWebSiteWithUrl,
+    getMangaWebSiteWithUrlList,
+    getDefaultMangaWebSite,
     PageNumber,
     DownloadChapterRequest(..),
     DownloadInfo(..),
@@ -19,25 +23,46 @@ import GHC.Generics
 import Data.Aeson
 import Data.List
 import Data.Char
+import Data.Maybe
 
-data WebSite = MangaKatana Url | MangaKakalot Url deriving (Generic, Show)
-instance FromJSON WebSite
-instance ToJSON WebSite
+data MangaWebSite = MangaKatana Url | MangaKakalot Url deriving (Generic, Show)
+instance FromJSON MangaWebSite
+instance ToJSON MangaWebSite
 
-getWebSite :: String -> Maybe WebSite
-getWebSite s
+
+getDefaultMangaWebSite :: MangaWebSite
+getDefaultMangaWebSite = MangaKatana $ sanatizeUrl ""
+ 
+getMangaWebSiteUrl :: MangaWebSite -> Url -- there is probably a bhttps://www.google.com/search?client=ubuntu&channel=fs&q=haskell+regex+replace&ie=utf-8&oe=utf-8etter way to do this
+getMangaWebSiteUrl (MangaKatana a) = a
+getMangaWebSiteUrl (MangaKakalot a) = a
+
+getMangaWebSite :: String -> Maybe MangaWebSite
+getMangaWebSite s
   | (toLowerString "MangaKatana" `isInfixOf` toLowerString s) = Just $ MangaKatana $ sanatizeUrl s
   | (toLowerString  "MangaKakalot" `isInfixOf` toLowerString s) = Just $ MangaKakalot $ sanatizeUrl s
   | otherwise = Nothing
   where
     toLowerString m = map toLower m
 
+getMangaWebSiteWithUrl :: Url -> Maybe MangaWebSite
+getMangaWebSiteWithUrl s
+  | (toLowerString "MangaKatana" `isInfixOf` urlValue s) = Just $ MangaKatana $  s
+  | (toLowerString  "MangaKakalot" `isInfixOf` urlValue s) = Just $ MangaKakalot $ s
+  | otherwise = Nothing
+  where
+    toLowerString m = map toLower m
+
+getMangaWebSiteWithUrlList :: [Url] -> [MangaWebSite]
+getMangaWebSiteWithUrlList [] = []
+getMangaWebSiteWithUrlList (x:xs) = (maybeToList (getMangaWebSiteWithUrl x)) ++ (getMangaWebSiteWithUrlList $ xs)
+
 newtype Url = Url {urlValue :: String} deriving (Show,Eq ,Generic)
 instance FromJSON Url
 instance ToJSON Url
 
 type PageNumber = Int
-data DownloadChapterRequest = DownloadChapterRequest
+data DownloadChapterRequest = DownloadChapterRequest -- we create this server side
   {
     downloadChapterRequestMangaName  :: String,
     downloadChapterRequestNumber :: Integer,
@@ -48,24 +73,33 @@ instance ToJSON DownloadChapterRequest
 
 data DownloadInfo = DownloadInfo
   {
-    downloadInfoUrl :: [(PageNumber,Url)]
+    downloadInfoUrl :: [(PageNumber,Url)] -- these are plain old urls that we are going to map download
   } deriving Generic
 instance FromJSON DownloadInfo
 instance ToJSON DownloadInfo
 
-
-data PageLinkRequest = PageLinkRequest
+data PageLinkRequest = PageLinkRequest -- external api 
   {
-    --pageLinkRequestUrl :: WebSite,
-    pageLinkRequestUrl :: [String],
+    --pageLinkRequestUrl :: MangaWebSite,
+    pageLinkRequestUrl :: [String], -- convert into mangawebsite
     pageLinkRequestMangaName :: String
   } deriving (Generic,Show)
 instance FromJSON PageLinkRequest
 instance ToJSON PageLinkRequest
 
+data PageLinkRequest' = PageLinkRequest' -- external api 
+  {
+    --pageLinkRequestUrl :: MangaWebSite,
+    pageLinkRequestUrl' :: [MangaWebSite], -- convert into mangawebsite
+    pageLinkRequestMangaName' :: String
+  } deriving (Generic,Show)
+instance FromJSON PageLinkRequest'
+instance ToJSON PageLinkRequest'
+
 data PageLink = PageLink {
   pageLinkMangaName :: String,
-  pageLinkUrl:: Url ,
+  --pageLinkUrl:: Url ,
+  pageLinkUrl:: MangaWebSite , -- here we are looking directly at the type of the url to figure out how to parse it
   pageLinkChapterName::String
   } deriving Generic
 instance FromJSON PageLink

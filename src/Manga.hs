@@ -48,7 +48,6 @@ import Scraper
 import ScraperData
 import DownloadChapter
 
-
 downloadMangaHandler :: PageLinkRequest -> Handler [PageLink]
 downloadMangaHandler links = liftIO $ downloadManga links
 
@@ -78,15 +77,23 @@ getMangaLinks r = do
 
 grabLinks :: PageLinkRequest -> IO [PageLink]
 grabLinks r = do
-  z <- grabPageWithRetry urls
-  let strHtml = T.unpack $ listDefault z
-  m <- return (parseChapters (parseTags strHtml))
-  return (map (\x -> PageLink{ pageLinkUrl = (sanatizeUrl (fst x)) , pageLinkChapterName = (snd x), pageLinkMangaName = pageLinkRequestMangaName r}) m)
+  --z <- grabPageWithRetry' $ urls -- short circut out of this via transformer? how
+  z <- grabPageRemoveRedundancy $ urls  -- short circut out of this via transformer? how
+  --let strHtml = T.unpack $ snd $ listDefault z
+  let strHtml = T.unpack $ snd $ z
+  --let webSite = getWebSite $ pageLinkRequestUrl z
+  m <- return (parseChapters  (parseTags strHtml))
+  return (map (\x -> PageLink{ pageLinkUrl = (webSite $ (fst x)) , pageLinkChapterName = (snd x), pageLinkMangaName = pageLinkRequestMangaName r}) m)
     where
     urls = map sanatizeUrl $ pageLinkRequestUrl r
-    listDefault a = case a of [] -> ""
+  -- shitty version of safe head
+    listDefault a = case a of [] -> (getDefaultMangaWebSite, "")
                               (h:_) -> h
-      --url = case (pageLinkRequestUrl r) of MangaKatana s -> s
+  -- More shittyness... gonna fix this with getting good at embedded maybet
+    webSite s = case (getMangaWebSite s) of Just a -> a
+                                            Nothing -> getDefaultMangaWebSite
+
+        --url = case (pageLinkRequestUrl r) of MangaKatana s -> s
         --                                 Mangakakalot s -> s
       
 
