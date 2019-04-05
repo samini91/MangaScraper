@@ -26,8 +26,11 @@ import Data.Char
 import Data.Maybe
 
 data MangaWebSite = MangaKatana Url | MangaKakalot Url deriving (Generic, Show)
+--newtype MangaWebSite s = MangaWebSite Url deriving (Generic, Show)
 instance FromJSON MangaWebSite
 instance ToJSON MangaWebSite
+
+--data ActualSites =  MangaKatana Url | MangaKakalot Url deriving (Generic, Show)
 
 
 getDefaultMangaWebSite :: MangaWebSite

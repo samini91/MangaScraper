@@ -27,6 +27,7 @@ import Servant (Handler)
 import GHC.Generics
 import Control.Monad.IO.Class (liftIO)
 import Control.Lens
+import Control.Monad
 import System.Directory
 import Network.Wreq
 import Text.HTML.TagSoup
@@ -72,8 +73,8 @@ getMangaLinksHandler r = liftIO $ getMangaLinks r
 
 getMangaLinks :: PageLinkRequest -> IO [PageLink]
 getMangaLinks r = do
-  x <- grabLinks r
-  return $ reverse x
+  x <- doit $ sanatizeUrl <$> pageLinkRequestUrl r
+  return $ reverse $ join x
 
 grabLinks :: PageLinkRequest -> IO [PageLink]
 grabLinks r = do
@@ -97,3 +98,45 @@ grabLinks r = do
         --                                 Mangakakalot s -> s
       
 
+
+--grabLinks' :: PageLinkRequest -> IO [[PageLink]]
+--grabLinks' links = do
+--  z <- return $ urls
+--  --return (map (\x -> PageLink{ pageLinkUrl = (webSite $ (fst x)) , pageLinkChapterName = (snd x), pageLinkMangaName = pageLinkRequestMangaName r}) m)
+--  --return []
+--  
+--  where
+--    urls = sanatizeUrl <$> pageLinkRequestUrl links
+--    webSite s = case (getMangaWebSite s) of Just a -> a
+--                                            Nothing -> getDefaultMangaWebSite
+--
+
+doit' :: [Url] -> IO [[PageLink]]
+doit' x =
+  do
+  z <- grabPages x
+  strHtml <- return $ T.unpack <$> z
+  e <- return $ (parseChapters . parseTags) <$> strHtml
+  return $ toPageLink <$> e
+  where
+    toPageLink m = (map (\x -> PageLink{ pageLinkUrl = (webSite $ (fst x)) , pageLinkChapterName = (snd x)}) m)
+    webSite s = case (getMangaWebSite s) of Just a -> a
+                                            Nothing -> getDefaultMangaWebSite
+  
+--doit :: [Url] -> IO [[(MangaWebeSite, PageLink)]]
+doit :: [Url] -> IO [[PageLink]]
+doit x =
+  do
+    --z <-  grabPages x
+  z <-  grabPageMangaChapterLinks (mangaWebSite <$> x)
+  --let mangaWebSite = getMangaWebSiteWithUrl 
+  --strHtml <- return $ T.unpack <$> snd <$> z
+  strHtml <- return $ z >>= (\q -> return $ (fst q , T.unpack $ snd q))
+  e <- return $ (tempParseChapters . parseTags) <$> snd <$> strHtml -- pattern match what parser we want to use
+  return $ toPageLink <$> e
+  where
+    toPageLink m = (map (\x -> PageLink{ pageLinkUrl = (webSite $ (fst x)) , pageLinkChapterName = (snd x)}) m)
+    webSite s = case (getMangaWebSite s) of Just a -> a
+                                            Nothing -> getDefaultMangaWebSite
+    mangaWebSite s = case (getMangaWebSiteWithUrl s) of Just a -> a
+                                                        Nothing -> getDefaultMangaWebSite

@@ -10,7 +10,9 @@ module Scraper
       parseChapters,
       grabPages,
       grabPage,
-      grabPageRemoveRedundancy
+      grabPageRemoveRedundancy,
+      grabPageMangaChapterLinks,
+      tempParseChapters
     ) where
 
 import qualified Data.Text as T
@@ -47,6 +49,8 @@ timeoutMaybe x = do
     Left ex -> closeSession >> return Nothing
     Right z -> return $ Just (z)
 
+--parseChapters :: (MangaWebSite, [Tag String]) -> [(String,String)]
+--parseChapters (MangaKatana e) tags = scrapeChapters
 parseChapters :: [Tag String] -> [(String,String)]
 parseChapters tags = scrapeChapters
   where
@@ -57,6 +61,18 @@ parseChapters tags = scrapeChapters
       return (x, y)
     scrapeChapters = case s of Just a -> a
                                Nothing -> []
+
+tempParseChapters :: [Tag String] -> [(String,String)]
+tempParseChapters tags = scrapeChapters
+  where
+    s =  (scrape scraper tags)
+    scraper = chroots(("div" @: [hasClass "chapter"]) // ("div" @: [hasClass "row"] )) $ do
+      x <- (Text.HTML.Scalpel.attr "href" "a") 
+      y <- (text $ "a")
+      return (x, y)
+    scrapeChapters = case s of Just a -> a
+                               Nothing -> []
+                               
 
 grabPages :: [Url] -> IO [T.Text]
 grabPages x = runSession chromeConfig $ do
@@ -122,7 +138,22 @@ doMapM x f = runMaybeT $ mapM' x f
 
 mapM' :: [a] -> (a -> IO (Maybe b)) -> MaybeT IO b
 mapM' [] f = MaybeT $ return Nothing
-mapM' (x:xs) f = MaybeT (f x) <|> mapM' xs f 
+mapM' (x:xs) f = MaybeT (f x) <|> mapM' xs f
+
+
+
+grabPageMangaChapterLinks :: [MangaWebSite] -> IO [(MangaWebSite, T.Text)]
+--grabPageMangaChapterLinks :: [MangaWebSite] -> IO [(T.Text)]
+--grabPageMangaChapterLinks x = runSession chromeConfig $ ( return >>= grabPageManga >>= (return)) `mapM` x
+grabPageMangaChapterLinks x = runSession chromeConfig $ siteAndData `mapM` x 
+  where
+    chromeConfig = useBrowser chrome defaultConfig
+    siteAndData :: MangaWebSite -> WD (MangaWebSite, T.Text)
+    siteAndData e =
+      do
+      site <- return e
+      pageHtml <- grabPageManga site
+      return (site, pageHtml)
 
 grabPageManga :: MangaWebSite -> WD (T.Text)
 grabPageManga x =

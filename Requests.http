@@ -41,10 +41,11 @@ POST :url/downloadManga
 }
 
 #"pageLinkRequestUrl" : {"tag" : "http://mangakatana.com/manga/hero-i-quit-a-long-time-ago.19965"},
+#https://mangakakalot.com/manga/pn918005
 #	"pageLinkRequestUrl" : {"mangaKatana" : "http://mangakatana.com/manga/hero-i-quit-a-long-time-ago.19965"},
 POST :url/downloadManga
 :headers
 {	
-	"pageLinkRequestUrl" :["http://mangakatana.com/manga/hero-i-quit-a-long-time-ago.19965"],
-	"pageLinkRequestMangaName" : "Hero I Quit a Long Time Ago"
+	"pageLinkRequestUrl" :["https://mangakakalot.com/manga/pn918005"],
+	"pageLinkRequestMangaName" : "leveling guide or something"
 }

@@ -47,7 +47,8 @@ download u = do
   m <- grabPageRemoveRedundancy $ getMangaWebSiteUrl <$> cycle([link]) -- why doesnt this work?
   let z = snd $ m
   let strHtml = T.unpack $ z
-  x <-  return (parseImagesFromString (parseTags strHtml))
+  --x <-  return (parseImagesFromString (parseTags strHtml))
+  x <-  return (parseImagesFromString' (parseTags strHtml))
   _ <- forkIO ((\dInfo -> ()) <$> (saveFiles (downloadInfoUrl x))) -- there is probably a better way to do this
   return (DownloadInfo {downloadInfoUrl = (downloadInfoUrl x)})
   where
@@ -96,7 +97,7 @@ groupPageDownloads :: Int -> [DownloadChapterRequest] -> [[DownloadChapterReques
 groupPageDownloads a [] =  []
 groupPageDownloads a m = [take a m] ++ (groupPageDownloads a $ drop a m)
 
-
+-- katana
 parseImagesFromString :: [Tag String] -> DownloadInfo
 parseImagesFromString tags = do
   let x = scrapeImages
@@ -106,6 +107,18 @@ parseImagesFromString tags = do
     scrapeImagesWithPageNumber = ( zip [0..] scrapeImages)  
     scrapeImages = case s of Just a -> sanatizeUrl <$> a
                              Nothing -> []
+
+-- kakalot
+parseImagesFromString' :: [Tag String] -> DownloadInfo
+parseImagesFromString' tags = do
+  let x = scrapeImages
+  DownloadInfo {downloadInfoUrl = scrapeImagesWithPageNumber}
+  where
+    s = scrape (attrs "src" "img") tags
+    scrapeImagesWithPageNumber = ( zip [0..] scrapeImages)  
+    scrapeImages = case s of Just a -> sanatizeUrl <$> a
+                             Nothing -> []
+                             
 
 
 htmlDownloadInfo :: T.Text -> IO DownloadInfo
