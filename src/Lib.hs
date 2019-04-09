@@ -17,7 +17,7 @@ import Manga
 import ScraperData
 import DownloadChapter
 
-type API = "downloadManga" :> ReqBody '[JSON] PageLinkRequest :> Post '[JSON] [PageLink]
+type API = "downloadManga" :> ReqBody '[JSON] PageLinkRequest :> Post '[JSON] [[PageLink]]
            
 startApp :: IO ()
 startApp = run 8080 app

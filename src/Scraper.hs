@@ -7,12 +7,13 @@ module Scraper
     (
       timeoutMaybe,
       grabPageWithRetry,
-      parseChapters,
+      --parseChapters,
       grabPages,
       grabPage,
       grabPageRemoveRedundancy,
       grabPageMangaChapterLinks,
-      tempParseChapters
+      parseAllChapters
+      --tempParseChapters
     ) where
 
 import qualified Data.Text as T
@@ -51,19 +52,19 @@ timeoutMaybe x = do
 
 --parseChapters :: (MangaWebSite, [Tag String]) -> [(String,String)]
 --parseChapters (MangaKatana e) tags = scrapeChapters
-parseChapters :: [Tag String] -> [(String,String)]
-parseChapters tags = scrapeChapters
-  where
-    s =  (scrape scraper tags)
-    scraper = chroots(("div" @: [hasClass "chapters"]) // ("div" @: [hasClass "chapter"] )) $ do
-      x <- (Text.HTML.Scalpel.attr "href" "a") 
-      y <- (text $ "a")
-      return (x, y)
-    scrapeChapters = case s of Just a -> a
-                               Nothing -> []
+-- parseChapters :: [Tag String] -> [(String,String)]
+-- parseChapters tags = scrapeChapters
+--   where
+--     s =  (scrape scraper tags)
+--     scraper = chroots(("div" @: [hasClass "chapters"]) // ("div" @: [hasClass "chapter"] )) $ do
+--       x <- (Text.HTML.Scalpel.attr "href" "a") 
+--       y <- (text $ "a")
+--       return (x, y)
+--     scrapeChapters = case s of Just a -> a
+--                                Nothing -> []
 
-tempParseChapters :: [Tag String] -> [(String,String)]
-tempParseChapters tags = scrapeChapters
+parseAllChapters :: MangaWebSite -> [Tag String] -> [(String,String)]
+parseAllChapters (MangaKakalot _) tags = scrapeChapters
   where
     s =  (scrape scraper tags)
     scraper = chroots(("div" @: [hasClass "chapter"]) // ("div" @: [hasClass "row"] )) $ do
@@ -72,6 +73,16 @@ tempParseChapters tags = scrapeChapters
       return (x, y)
     scrapeChapters = case s of Just a -> a
                                Nothing -> []
+parseAllChapters (MangaKatana _) tags = scrapeChapters
+  where
+    s =  (scrape scraper tags)
+    scraper = chroots(("div" @: [hasClass "chapters"]) // ("div" @: [hasClass "chapter"] )) $ do
+      x <- (Text.HTML.Scalpel.attr "href" "a") 
+      y <- (text $ "a")
+      return (x, y)
+    scrapeChapters = case s of Just a -> a
+                               Nothing -> []
+                               
                                
 
 grabPages :: [Url] -> IO [T.Text]
@@ -140,20 +151,18 @@ mapM' :: [a] -> (a -> IO (Maybe b)) -> MaybeT IO b
 mapM' [] f = MaybeT $ return Nothing
 mapM' (x:xs) f = MaybeT (f x) <|> mapM' xs f
 
-
-
 grabPageMangaChapterLinks :: [MangaWebSite] -> IO [(MangaWebSite, T.Text)]
---grabPageMangaChapterLinks :: [MangaWebSite] -> IO [(T.Text)]
---grabPageMangaChapterLinks x = runSession chromeConfig $ ( return >>= grabPageManga >>= (return)) `mapM` x
-grabPageMangaChapterLinks x = runSession chromeConfig $ siteAndData `mapM` x 
+--grabPageMangaChapterLinks x = runSession chromeConfig $ siteAndData `mapM` x
+grabPageMangaChapterLinks x = siteAndData `mapM` x 
   where
     chromeConfig = useBrowser chrome defaultConfig
-    siteAndData :: MangaWebSite -> WD (MangaWebSite, T.Text)
+    siteAndData :: MangaWebSite -> IO (MangaWebSite, T.Text)
     siteAndData e =
+      runSession chromeConfig $
       do
-      site <- return e
-      pageHtml <- grabPageManga site
-      return (site, pageHtml)
+        site <- return e
+        pageHtml <- grabPageManga site
+        return (site, pageHtml)
 
 grabPageManga :: MangaWebSite -> WD (T.Text)
 grabPageManga x =

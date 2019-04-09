@@ -46,6 +46,21 @@ POST :url/downloadManga
 POST :url/downloadManga
 :headers
 {	
-	"pageLinkRequestUrl" :["https://mangakakalot.com/manga/pn918005"],
+	"pageLinkRequestUrl" :["https://mangakakalot.com/manga/mh918849"],
+	"pageLinkRequestMangaName" : "leveling guide or something"
+}
+
+#
+POST :url/downloadManga
+:headers
+{	
+	"pageLinkRequestUrl" :["https://mangakakalot.com/manga/md918944","http://mangakatana.com/manga/legend-the-beginning.22587"],
+	"pageLinkRequestMangaName" : "aaaa"
+}
+#
+POST :url/downloadManga
+:headers
+{	
+	"pageLinkRequestUrl" :["https://mangakakalot.com/manga/mh918849"],
 	"pageLinkRequestMangaName" : "leveling guide or something"
 }

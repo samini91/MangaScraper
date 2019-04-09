@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 module ScraperData
   (
     MangaWebSite(),
@@ -15,7 +16,9 @@ module ScraperData
     PageLink(..),
     Url(),
     urlValue,
-    sanatizeUrl
+    sanatizeUrl,
+    pattern MangaKatana,
+    pattern MangaKakalot
   )
 where
 
@@ -25,33 +28,36 @@ import Data.List
 import Data.Char
 import Data.Maybe
 
-data MangaWebSite = MangaKatana Url | MangaKakalot Url deriving (Generic, Show)
+data MangaWebSite = MangaKatana_ Url | MangaKakalot_ Url deriving (Generic, Show)
 --newtype MangaWebSite s = MangaWebSite Url deriving (Generic, Show)
 instance FromJSON MangaWebSite
 instance ToJSON MangaWebSite
 
+pattern MangaKatana a <- MangaKatana_ a
+pattern MangaKakalot a <- MangaKakalot_ a
 --data ActualSites =  MangaKatana Url | MangaKakalot Url deriving (Generic, Show)
 
-
 getDefaultMangaWebSite :: MangaWebSite
-getDefaultMangaWebSite = MangaKatana $ sanatizeUrl ""
+getDefaultMangaWebSite = MangaKatana_ $ sanatizeUrl ""
  
 getMangaWebSiteUrl :: MangaWebSite -> Url -- there is probably a bhttps://www.google.com/search?client=ubuntu&channel=fs&q=haskell+regex+replace&ie=utf-8&oe=utf-8etter way to do this
 getMangaWebSiteUrl (MangaKatana a) = a
 getMangaWebSiteUrl (MangaKakalot a) = a
 
+
+
 getMangaWebSite :: String -> Maybe MangaWebSite
 getMangaWebSite s
-  | (toLowerString "MangaKatana" `isInfixOf` toLowerString s) = Just $ MangaKatana $ sanatizeUrl s
-  | (toLowerString  "MangaKakalot" `isInfixOf` toLowerString s) = Just $ MangaKakalot $ sanatizeUrl s
+  | (toLowerString "MangaKatana" `isInfixOf` toLowerString s) = Just $ MangaKatana_ $ sanatizeUrl s
+  | (toLowerString  "MangaKakalot" `isInfixOf` toLowerString s) = Just $ MangaKakalot_ $ sanatizeUrl s
   | otherwise = Nothing
   where
     toLowerString m = map toLower m
 
 getMangaWebSiteWithUrl :: Url -> Maybe MangaWebSite
 getMangaWebSiteWithUrl s
-  | (toLowerString "MangaKatana" `isInfixOf` urlValue s) = Just $ MangaKatana $  s
-  | (toLowerString  "MangaKakalot" `isInfixOf` urlValue s) = Just $ MangaKakalot $ s
+  | (toLowerString "MangaKatana" `isInfixOf` urlValue s) = Just $ MangaKatana_ $  s
+  | (toLowerString  "MangaKakalot" `isInfixOf` urlValue s) = Just $ MangaKakalot_ $ s
   | otherwise = Nothing
   where
     toLowerString m = map toLower m
@@ -69,7 +75,7 @@ data DownloadChapterRequest = DownloadChapterRequest -- we create this server si
   {
     downloadChapterRequestMangaName  :: String,
     downloadChapterRequestNumber :: Integer,
-    downloadChapterRequestLink :: PageLink
+    downloadChapterRequestLink :: [PageLink]
   } deriving Generic
 instance FromJSON DownloadChapterRequest
 instance ToJSON DownloadChapterRequest
