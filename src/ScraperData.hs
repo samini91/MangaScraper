@@ -44,8 +44,6 @@ getMangaWebSiteUrl :: MangaWebSite -> Url -- there is probably a bhttps://www.go
 getMangaWebSiteUrl (MangaKatana a) = a
 getMangaWebSiteUrl (MangaKakalot a) = a
 
-
-
 getMangaWebSite :: String -> Maybe MangaWebSite
 getMangaWebSite s
   | (toLowerString "MangaKatana" `isInfixOf` toLowerString s) = Just $ MangaKatana_ $ sanatizeUrl s
@@ -89,21 +87,11 @@ instance ToJSON DownloadInfo
 
 data PageLinkRequest = PageLinkRequest -- external api 
   {
-    --pageLinkRequestUrl :: MangaWebSite,
     pageLinkRequestUrl :: [String], -- convert into mangawebsite
     pageLinkRequestMangaName :: String
   } deriving (Generic,Show)
 instance FromJSON PageLinkRequest
 instance ToJSON PageLinkRequest
-
-data PageLinkRequest' = PageLinkRequest' -- external api 
-  {
-    --pageLinkRequestUrl :: MangaWebSite,
-    pageLinkRequestUrl' :: [MangaWebSite], -- convert into mangawebsite
-    pageLinkRequestMangaName' :: String
-  } deriving (Generic,Show)
-instance FromJSON PageLinkRequest'
-instance ToJSON PageLinkRequest'
 
 data PageLink = PageLink {
   pageLinkMangaName :: String,

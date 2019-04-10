@@ -12,10 +12,8 @@ module Lib
 
 import Network.Wai.Handler.Warp
 import Servant
-import Scraper
 import Manga
 import ScraperData
-import DownloadChapter
 
 type API = "downloadManga" :> ReqBody '[JSON] PageLinkRequest :> Post '[JSON] [[PageLink]]
            
