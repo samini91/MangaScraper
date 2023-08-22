@@ -53,20 +53,20 @@ parseAllChapters (MangaKatana _) tags = scrapeChapters
                                Nothing -> []
                                
 grabPages :: [Url] -> IO [T.Text]
-grabPages x = runSession chromeConfig $ do
+grabPages x = runSession firefoxConfig $ do
   z <- Prelude.mapM openAndGetSource x
   closeSession                         
   return z
   where
-    chromeConfig = useBrowser chrome defaultConfig
+    firefoxConfig = useBrowser firefox defaultConfig
     openAndGetSource u = do openPage (urlValue u)
                             getSource
 
 grabPageWithRetry :: [Url] -> IO [T.Text]
 grabPageWithRetry x =  mapRetry
   where
-    mapRetry = (\y -> runSession chromeConfig (onTimeout(grabPage y)(closeSession >> return ""))) `mapM` x -- need to take a specific amount only 
-    chromeConfig = useBrowser chrome config
+    mapRetry = (\y -> runSession firefoxConfig (onTimeout(grabPage y)(closeSession >> return ""))) `mapM` x -- need to take a specific amount only 
+    firefoxConfig = useBrowser firefox config
     config = defaultConfig{wdCapabilities = caps}
     caps = allCaps {additionalCaps = [("pageLoadStrategy","none")]}
 
@@ -80,9 +80,9 @@ grabPageRemoveRedundancy x =
 grabPageWithRetryMaybe :: [Url] ->  IO (Maybe (MangaWebSite, T.Text) )
 grabPageWithRetryMaybe x = mapRetry
   where
-    mapRetry = doMapM mangaSites (\y ->  runSession chromeConfig (timeoutMaybe (logic y)) )  
+    mapRetry = doMapM mangaSites (\y ->  runSession firefoxConfig (timeoutMaybe (logic y)) )  
     logic y = grabPageManga y >>= (\z -> return $ (y,z))
-    chromeConfig = useBrowser chrome defaultConfig
+    firefoxConfig = useBrowser firefox defaultConfig
     --config = defaultConfig{wdCapabilities = caps}
     --caps = allCaps {additionalCaps = [("pageLoadStrategy","none")]}
     mangaSites = getMangaWebSiteWithUrlList x
@@ -98,10 +98,10 @@ mapM' (x:xs) f = MaybeT (f x) <|> mapM' xs f
 grabPageMangaChapterLinks :: [MangaWebSite] -> IO [(MangaWebSite, T.Text)]
 grabPageMangaChapterLinks x = siteAndData `mapM` x 
   where
-    chromeConfig = useBrowser chrome defaultConfig
+    firefoxConfig = useBrowser firefox defaultConfig
     siteAndData :: MangaWebSite -> IO (MangaWebSite, T.Text)
     siteAndData e =
-      runSession chromeConfig $
+      runSession firefoxConfig $
       do
         site <- return e
         pageHtml <- grabPageManga site

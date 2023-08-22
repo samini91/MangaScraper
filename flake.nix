@@ -18,14 +18,22 @@
         {
           devShells.default = mkShell {
             buildInputs = [
-              # ghc
+              ghc
               # haskell.compiler.ghc88
-              haskell.compiler.ghc94
+              # haskell.compiler.ghc94
               stack
               pkg-config
               zlib
+              # chromedriver
+              geckodriver
+              selenium-server-standalone
+              # google-chrome
+              # chrome
+              # haskellPackages.selenium-server
+# haskellPackages.selenium
             ];
-
+            shellHook="
+            ";
           };
         }
     );
