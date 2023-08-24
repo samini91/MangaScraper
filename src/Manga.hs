@@ -12,7 +12,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeOperators   #-}
 {-# LANGUAGE OverloadedStrings #-}
-
+{-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module Manga
   (
@@ -31,22 +32,31 @@ import ScraperData
 import DownloadChapter
 import Data.List
 import Data.Char
+import Control.Concurrent.Async (mapConcurrently_, mapConcurrently)
+import Control.Concurrent (forkIO)
+import System.Log.FastLogger
+import qualified ScraperData as SD
+import Utils (mapConcurrentlyWithLimit)
+import Infra (Env(..))
 
-downloadMangaHandler :: PageLinkRequest -> Handler [[PageLink]]
-downloadMangaHandler links = liftIO $ downloadManga links
+downloadMangaHandler :: Env ->  PageLinkRequest -> Handler [[PageLink]]
+downloadMangaHandler env links = liftIO $ downloadManga env links
 
-downloadManga :: PageLinkRequest -> IO[[PageLink]]
-downloadManga links = do
+downloadManga :: Env -> PageLinkRequest -> IO[[PageLink]]
+downloadManga env links = do
+  let logger = newFastLogger (LogStdout 100)
   l <- getMangaLinks links
   let chapters = zip [0..] l -- this can be better
-  m <- return (map (\z -> DownloadChapterRequest{
-                       downloadChapterRequestMangaName = pageLinkRequestMangaName links,
-                       downloadChapterRequestNumber = (fst z) ,
-                       downloadChapterRequestLink = (snd z)}) chapters)
+  let m = map (\z -> DownloadChapterRequest{
+                           downloadChapterRequestMangaName = pageLinkRequestMangaName links,
+                           downloadChapterRequestNumber = fst z,
+                           downloadChapterRequestLink = snd z}) chapters
+  let logList = intercalate "\n" (show . SD.pageLinkUrl <$> concat l)
+  _ <- env.logFunc $ toLogStr logList
   _ <- downloadAllm m
   return l
   where
-    downloadAllm x = Prelude.mapM download x
+    downloadAllm x = mapConcurrentlyWithLimit download x 3
 
 getMangaLinksHandler :: PageLinkRequest -> Handler [[PageLink]]
 getMangaLinksHandler r = liftIO $ getMangaLinks r
@@ -54,31 +64,30 @@ getMangaLinksHandler r = liftIO $ getMangaLinks r
 getMangaLinks :: PageLinkRequest -> IO [[PageLink]]
 getMangaLinks r = do
   x <- extractMangaPages (pageLinkRequestMangaName r) $ sanatizeUrl <$> pageLinkRequestUrl r
-  return $ reverse $ x
+  return x
 
 type MangaName = String
-extractMangaPages :: MangaName -> [Url] -> IO [[PageLink]] 
+extractMangaPages :: MangaName -> [Url] -> IO [[PageLink]]
 extractMangaPages name x =
   do
   z <-  grabPageMangaChapterLinks (mangaWebSite <$> x)
-  strHtml <- return $ z >>= (\q -> return $ (fst q , T.unpack $ snd q))
-  e <- return $ (\m -> ((parseAllChapters (fst m) ) $ parseTags (snd m))) <$> strHtml -- pattern match what parser we want to use
-  return $ mergePageLinks $ toPageLink <$> e 
+  let strHtml = z >>= (\q -> return (fst q , T.unpack $ snd q))
+  let e = (\m -> parseAllChapters (fst m) $ parseTags (snd m)) <$> strHtml -- pattern match what parser we want to use
+  return $ mergePageLinks $ toPageLink <$> e
   where
-    toPageLink m = (map (\z -> PageLink{ pageLinkUrl = (webSite $ (fst z)) , pageLinkChapterName = (snd z), pageLinkMangaName = name }) m)
+    toPageLink m = map (\z -> PageLink{ pageLinkUrl = (webSite $ (fst z)) , pageLinkChapterName = (snd z), pageLinkMangaName = name }) m
     webSite s = case (getMangaWebSite s) of Just a -> a
                                             Nothing -> getDefaultMangaWebSite
     mangaWebSite s = case (getMangaWebSiteWithUrl s) of Just a -> a
                                                         Nothing -> getDefaultMangaWebSite
-
 
 mergePageLinks :: [[PageLink]] -> [[PageLink]]
 mergePageLinks x = groupBy grouping $ sortBy comparison (join x)
   where
     comparison = (\(PageLink _ _ name1) (PageLink _ _ name2)  -> compare name1 name2)
     grouping = (\(PageLink _ _ name1) (PageLink _ _ name2) -> compareChapterNames name1 name2)
-    compareChapterNames s1 s2 = getChapterNumber (filter isDigit s1) == getChapterNumber (filter isDigit s2) 
-    getChapterNumber :: String -> Integer 
+    compareChapterNames s1 s2 = getChapterNumber (filter isDigit s1) == getChapterNumber (filter isDigit s2)
+    getChapterNumber :: String -> Integer
     getChapterNumber s = read s  -- why isnt this forced into a maybe since this can fail?
 
 

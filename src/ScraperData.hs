@@ -1,6 +1,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 module ScraperData
   (
     MangaWebSite(),
@@ -28,6 +30,7 @@ import Data.List
 import Data.Char
 import Data.Maybe
 
+
 data MangaWebSite = MangaKatana_ Url | MangaKakalot_ Url deriving (Generic, Show)
 --newtype MangaWebSite s = MangaWebSite Url deriving (Generic, Show)
 instance FromJSON MangaWebSite
@@ -39,30 +42,30 @@ pattern MangaKakalot a <- MangaKakalot_ a
 
 getDefaultMangaWebSite :: MangaWebSite
 getDefaultMangaWebSite = MangaKatana_ $ sanatizeUrl ""
- 
+
 getMangaWebSiteUrl :: MangaWebSite -> Url -- there is probably a bhttps://www.google.com/search?client=ubuntu&channel=fs&q=haskell+regex+replace&ie=utf-8&oe=utf-8etter way to do this
 getMangaWebSiteUrl (MangaKatana a) = a
 getMangaWebSiteUrl (MangaKakalot a) = a
 
 getMangaWebSite :: String -> Maybe MangaWebSite
 getMangaWebSite s
-  | (toLowerString "MangaKatana" `isInfixOf` toLowerString s) = Just $ MangaKatana_ $ sanatizeUrl s
-  | (toLowerString  "MangaKakalot" `isInfixOf` toLowerString s) = Just $ MangaKakalot_ $ sanatizeUrl s
+  | toLowerString "MangaKatana" `isInfixOf` toLowerString s = Just $ MangaKatana_ $ sanatizeUrl s
+  | toLowerString  "MangaKakalot" `isInfixOf` toLowerString s = Just $ MangaKakalot_ $ sanatizeUrl s
   | otherwise = Nothing
   where
     toLowerString m = map toLower m
 
 getMangaWebSiteWithUrl :: Url -> Maybe MangaWebSite
 getMangaWebSiteWithUrl s
-  | (toLowerString "MangaKatana" `isInfixOf` urlValue s) = Just $ MangaKatana_ $  s
-  | (toLowerString  "MangaKakalot" `isInfixOf` urlValue s) = Just $ MangaKakalot_ $ s
+  | toLowerString "MangaKatana" `isInfixOf` urlValue s = Just $ MangaKatana_ $  s
+  | toLowerString  "MangaKakalot" `isInfixOf` urlValue s = Just $ MangaKakalot_ $ s
   | otherwise = Nothing
   where
-    toLowerString m = map toLower m
+    toLowerString = map toLower
 
 getMangaWebSiteWithUrlList :: [Url] -> [MangaWebSite]
 getMangaWebSiteWithUrlList [] = []
-getMangaWebSiteWithUrlList (x:xs) = (maybeToList (getMangaWebSiteWithUrl x)) ++ (getMangaWebSiteWithUrlList $ xs)
+getMangaWebSiteWithUrlList (x:xs) = maybeToList (getMangaWebSiteWithUrl x) ++ (getMangaWebSiteWithUrlList $ xs)
 
 newtype Url = Url {urlValue :: String} deriving (Show,Eq ,Generic)
 instance FromJSON Url
@@ -103,12 +106,12 @@ instance FromJSON PageLink
 instance ToJSON PageLink
 
 
-sanatizeUrl :: String -> Url 
+sanatizeUrl :: String -> Url
 sanatizeUrl s =
-  if (startsWithhttp || startsWithhttps)
+  if startsWithhttp || startsWithhttps
   then Url sanatized
   else Url $ "http://" ++ sanatized
   where
     sanatized = dropWhile (=='/') s
-    startsWithhttp = isPrefixOf "http://" s
-    startsWithhttps = isPrefixOf  "https://" s
+    startsWithhttp = "http://" `isPrefixOf` s
+    startsWithhttps = "https://" `isPrefixOf` s

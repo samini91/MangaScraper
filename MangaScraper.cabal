@@ -20,6 +20,8 @@ library
                      , Manga
                      , ScraperData
                      , DownloadChapter
+                     , Utils
+                     , Infra
   build-depends:       base >= 4.7 && < 5
                      , aeson
                      , text
@@ -50,6 +52,7 @@ library
                      , monad-control
                      , call-stack
                      , monad-parallel
+                     , fast-logger
                      
 
                      

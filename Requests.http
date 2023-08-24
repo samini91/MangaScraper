@@ -64,3 +64,18 @@ POST :url/downloadManga
 	"pageLinkRequestUrl" :["https://mangakakalot.com/manga/mh918849"],
 	"pageLinkRequestMangaName" : "leveling guide or something"
 }
+#
+#
+POST :url/downloadManga
+:headers
+{	
+	"pageLinkRequestUrl" :["https://mangakatana.com/manga/the-knight-king-who-returned-with-a-god.26920"],
+	"pageLinkRequestMangaName" : "the-knight-king-who-returned-with-a-god"
+}
+#
+POST :url/downloadManga
+:headers
+{	
+	"pageLinkRequestUrl" :["https://mangakatana.com/manga/kill-the-hero.24400"],
+	"pageLinkRequestMangaName" : "kill_the_hero"
+}
