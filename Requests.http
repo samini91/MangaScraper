@@ -79,3 +79,11 @@ POST :url/downloadManga
 	"pageLinkRequestUrl" :["https://mangakatana.com/manga/kill-the-hero.24400"],
 	"pageLinkRequestMangaName" : "kill_the_hero"
 }
+#
+POST :url/downloadManga
+:headers
+{	
+	"pageLinkRequestUrl" :"https://mangakatana.com/manga/star-fostered-swordmaster.27126",
+	"pageLinkRequestMangaName" : "star-fostered-swordmaster"
+}
+#

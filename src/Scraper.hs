@@ -95,8 +95,8 @@ mapM' :: [a] -> (a -> IO (Maybe b)) -> MaybeT IO b
 mapM' [] _ = MaybeT $ return Nothing
 mapM' (x:xs) f = MaybeT (f x) <|> mapM' xs f
 
-grabPageMangaChapterLinks :: [MangaWebSite] -> IO [(MangaWebSite, T.Text)]
-grabPageMangaChapterLinks x = siteAndData `mapM` x
+grabPageMangaChapterLinks :: MangaWebSite -> IO (MangaWebSite, T.Text)
+grabPageMangaChapterLinks x = siteAndData x
   where
     firefoxConfig = useBrowser firefox defaultConfig
     siteAndData :: MangaWebSite -> IO (MangaWebSite, T.Text)

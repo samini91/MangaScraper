@@ -71,12 +71,13 @@ newtype Url = Url {urlValue :: String} deriving (Show,Eq ,Generic)
 instance FromJSON Url
 instance ToJSON Url
 
-type PageNumber = Int
+type PageNumber = String
+--type PageNumber = Int
 data DownloadChapterRequest = DownloadChapterRequest -- we create this server side
   {
     downloadChapterRequestMangaName  :: String,
-    downloadChapterRequestNumber :: Integer,
-    downloadChapterRequestLink :: [PageLink]
+    downloadChapterRequestNumber :: Int,
+    downloadChapterRequestLink :: PageLink
   } deriving Generic
 instance FromJSON DownloadChapterRequest
 instance ToJSON DownloadChapterRequest
@@ -90,7 +91,7 @@ instance ToJSON DownloadInfo
 
 data PageLinkRequest = PageLinkRequest -- external api 
   {
-    pageLinkRequestUrl :: [String], -- convert into mangawebsite
+    pageLinkRequestUrl :: String, -- convert into mangawebsite
     pageLinkRequestMangaName :: String
   } deriving (Generic,Show)
 instance FromJSON PageLinkRequest

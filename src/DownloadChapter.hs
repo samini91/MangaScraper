@@ -33,7 +33,7 @@ import Control.Exception.Lifted
 
 download :: DownloadChapterRequest -> IO DownloadInfo
 download u = do
-  m <- grabPageRemoveRedundancy $ getMangaWebSiteUrl <$> cycle (link u)
+  m <- grabPageRemoveRedundancy $ [getMangaWebSiteUrl (link u)]
   let z = snd m
   let strHtml = T.unpack z
   let x = parseImages (fst m) (parseTags strHtml)
@@ -43,8 +43,8 @@ download u = do
       filePath = mangaFilePath (downloadChapterRequestMangaName u) chapterNumber
       saveWithPath y = catchHttpException $ saveFile filePath y
       saveFiles y = mapConcurrently saveWithPath (filter (\x -> urlValue (snd x) /= "http://") y)
-      chapterNumber = show (downloadChapterRequestNumber u) ++ "_" ++ pageLinkChapterName (head (downloadChapterRequestLink u))
-      link r = pageLinkUrl <$> downloadChapterRequestLink r
+      chapterNumber = (addPadding 4 (downloadChapterRequestNumber u)) ++ "_" ++ pageLinkChapterName (downloadChapterRequestLink u)
+      link r = pageLinkUrl $ downloadChapterRequestLink r
 
 catchHttpException:: forall a . IO a -> IO (Either HttpException a) -- pass in the path instead
 catchHttpException x = Control.Exception.Lifted.try x  :: IO (Either HttpException a)
@@ -60,7 +60,7 @@ saveFile p x = do
     filePath = case (fromRelDir <$> p) of
                  Nothing -> ""
                  Just a -> a
-    fileName = filePath ++ (show $ fst x) ++ ".jpg" -- should wrap this in a monad too
+    fileName = filePath ++ (fst x) ++ ".jpg" -- should wrap this in a monad too
 
 -- katana
 parseImagesKatana :: [Tag String] -> DownloadInfo
@@ -68,9 +68,23 @@ parseImagesKatana tags =
   DownloadInfo {downloadInfoUrl = scrapeImagesWithPageNumber}
   where
     s = scrape (attrs "data-src" "img") tags
-    scrapeImagesWithPageNumber = zip [0..] scrapeImages
+    scrapeImagesWithPageNumber = zip ((addPadding 4) <$> [0..]) scrapeImages
     scrapeImages = case s of Just a -> sanatizeUrl <$> a
                              Nothing -> []
+
+duplicate :: String -> Int -> String
+duplicate string n = concat $ replicate n string
+
+
+-- possible padding is less than len I guess we should do nothing in that case
+addPadding :: Int -> Int -> String
+addPadding paddingAmt i =
+  let
+    s = show i
+    len = length s
+   in
+    duplicate "0" (paddingAmt - len) ++ s
+
 
 -- kakalot
 parseImagesKakalot :: [Tag String] -> DownloadInfo
@@ -78,7 +92,8 @@ parseImagesKakalot tags =
   DownloadInfo {downloadInfoUrl = scrapeImagesWithPageNumber}
   where
     s = scrape (attrs "src" "img") tags
-    scrapeImagesWithPageNumber = zip [0..] scrapeImages
+    scrapeImagesWithPageNumber = zip ((addPadding 4) <$> [0..]) scrapeImages
+--    scrapeImagesWithPageNumber = zip [0..] scrapeImages
     scrapeImages = case s of Just a -> sanatizeUrl <$> a
                              Nothing -> []
 
@@ -89,10 +104,20 @@ parseImages (MangaKakalot _) l = parseImagesKakalot l
 
 mangaFilePath :: String -> String -> Maybe (Path Rel Dir)
 mangaFilePath a b = do
-  x <- (parseRelDir "manga")
-  y <- (parseRelDir a)
-  z <- (parseRelDir b)
-  return (x </> y </> z)
+  _0 <- (parseRelDir "manga")
+  _1 <- (parseRelDir a)
+  _2 <- (parseRelDir b)
+  return (_0 </> _1 </> _2)
+  
 
 
 
+
+
+--mangaFilePath :: String -> String -> String -> Maybe (Path Rel Dir)
+--mangaFilePath a b c = do
+--  _0 <- (parseRelDir "manga")
+--  _1 <- (parseRelDir a)
+--  _2 <- (parseRelDir b)
+--  _3 <- (parseRelDir c)
+--  return (_0 </> _1 </> _2 </> _3)

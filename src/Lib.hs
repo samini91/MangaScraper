@@ -17,7 +17,7 @@ import ScraperData
 import System.Log.FastLogger
 import Infra (Env (..))
 
-type API = "downloadManga" :> ReqBody '[JSON] PageLinkRequest :> Post '[JSON] [[PageLink]]
+type API = "downloadManga" :> ReqBody '[JSON] PageLinkRequest :> Post '[JSON] [PageLink]
            
 startApp :: IO ()
 startApp = do
