@@ -56,7 +56,7 @@ downloadManga env links = do
   _ <- downloadAllm m
   return l
   where
-    downloadAllm x = mapConcurrentlyWithLimit download x 3
+    downloadAllm x = mapConcurrentlyWithLimit (download env) x 3
 
 getMangaLinksHandler :: Env -> PageLinkRequest -> Handler [PageLink]
 getMangaLinksHandler env r = liftIO $ getMangaLinks env r

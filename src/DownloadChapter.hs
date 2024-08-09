@@ -30,10 +30,14 @@ import qualified Data.ByteString.Lazy as B
 import Control.Monad.Trans.Except (ExceptT)
 import Network.HTTP.Client (HttpException (HttpExceptionRequest))
 import Control.Exception.Lifted
+import System.Log.FastLogger
+import Infra (Env(..))
 
-download :: DownloadChapterRequest -> IO DownloadInfo
-download u = do
+download :: Env -> DownloadChapterRequest -> IO DownloadInfo
+download env u = do
   m <- grabPageRemoveRedundancy $ [getMangaWebSiteUrl (link u)]
+  let log = getMangaWebSiteUrl (link u)
+  _ <- env.logFunc $ toLogStr (show log)
   let z = snd m
   let strHtml = T.unpack z
   let x = parseImages (fst m) (parseTags strHtml)
