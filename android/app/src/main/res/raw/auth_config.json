@@ -1,0 +1,12 @@
+{
+  "client_id": "964068033680-ks2c69dpna7bcfhe74kdj7umtrg972i9.apps.googleusercontent.com",
+  "redirect_uri": "com.googleusercontent.apps.964068033680-ks2c69dpna7bcfhe74kdj7umtrg972i9:/oauth2redirect",
+  "end_session_redirect_uri": "net.openid.appauthdemo:/oauth2redirect",
+  "authorization_scope": "openid email profile https://www.googleapis.com/auth/youtube.readonly",
+  "discovery_uri": "https://accounts.google.com/.well-known/openid-configuration",
+  "authorization_endpoint_uri": "",
+  "token_endpoint_uri": "",
+  "registration_endpoint_uri": "",
+  "user_info_endpoint_uri": "",
+  "https_required": true
+}

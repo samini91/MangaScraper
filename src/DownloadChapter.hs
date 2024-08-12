@@ -108,9 +108,9 @@ parseImages (MangaKakalot _) l = parseImagesKakalot l
 
 mangaFilePath :: String -> String -> Maybe (Path Rel Dir)
 mangaFilePath a b = do
-  _0 <- (parseRelDir "manga")
-  _1 <- (parseRelDir a)
-  _2 <- (parseRelDir b)
+  _0 <- parseRelDir "manga"
+  _1 <- parseRelDir a
+  _2 <- parseRelDir b
   return (_0 </> _1 </> _2)
   
 
