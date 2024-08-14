@@ -23,8 +23,11 @@ import net.openid.appauth.AuthorizationService
 import net.openid.appauth.AuthorizationServiceConfiguration
 import net.openid.appauth.ResponseTypeValues
 import tools.syncer.ui.theme.SyncerTheme
+import tools.syncer.activities.ScrollingActivity
 
-class MainActivity : ComponentActivity(), AuthorizationServiceConfiguration.RetrieveConfigurationCallback {
+//private static final int PICKFILE_REQUEST_CODE = 100;
+
+class MainActivity : ComponentActivity() {
     private lateinit var oneTapClient: SignInClient
     private lateinit var authService: AuthorizationService;
     private lateinit var config: AuthorizationServiceConfiguration;
@@ -33,58 +36,45 @@ class MainActivity : ComponentActivity(), AuthorizationServiceConfiguration.Retr
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setContent {
-            SyncerTheme {
-                // A surface container using the 'background' color from the theme
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    Greeting("Android HELLO")
-                }
-            }
+        try{
+            val result = 1;
+
+            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+
+            registerForActivityResult(intent, x -> {
+
+                                                              x
+                                                          })
+
+        // Optionally, specify a URI for the directory that should be opened in
+        // the system file picker when it loads.
+            //intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, uriToLoad);
+
+            //startActivityForResult(intent, result);
+
+
+            // val intent = Intent()
+            // intent.type = "file/*"
+            // intent.action = Intent.ACTION_GET_CONTENT
+            //launch picker screen
+            startActivity(intent)
+        } catch (e: Exception) {
+            Log.i("SAAUTH", e.message!!)
         }
-    }
 
-    override fun onFetchConfigurationCompleted(
-        serviceConfiguration: AuthorizationServiceConfiguration?,
-        ex: AuthorizationException?
-    ) {
-        // if(serviceConfiguration != null) {
-        //     //println(serviceConfiguration.toJson())
-        //     var request = AuthorizationRequest.Builder(
-        //         serviceConfiguration,
-        //         "964068033680-ks2c69dpna7bcfhe74kdj7umtrg972i9.apps.googleusercontent.com",
-        //         ResponseTypeValues.CODE,
-        //         Uri.parse("com.googleusercontent.apps.964068033680-ks2c69dpna7bcfhe74kdj7umtrg972i9:/oauth2redirect"),
-        //     ).setScopes(listOf("https://www.googleapis.com/auth/youtube.readonly", "openid", "email" ,"profile")).build()
+        // val intent = Intent(this, ScrollingActivity::class.java)
+        // startActivity(intent)
 
-        //     val intentBuilder =
-        //         authService.createCustomTabsIntentBuilder(request.toUri()).build()
-
-
-        //     val completionIntent = Intent(this, SyncHomePageActivity::class.java)
-        //     val cancelIntent = Intent(this, MainActivity::class.java)
-        //     cancelIntent.putExtra(EXTRA_FAILED, true);
-        //     cancelIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        //     val flags = 0
-
-        //     authService.performAuthorizationRequest(
-        //         request,
-        //         PendingIntent.getActivity(
-        //             this,
-        //             0,
-        //             completionIntent,
-        //             flags or PendingIntent.FLAG_MUTABLE
-        //         ),
-        //         PendingIntent.getActivity(
-        //             this,
-        //             0,
-        //             cancelIntent,
-        //             flags or PendingIntent.FLAG_MUTABLE
-        //         ),
-        //         intentBuilder);
-
+        // setContent {
+        //     SyncerTheme {
+        //         // A surface container using the 'background' color from the theme
+        //         Surface(
+        //             modifier = Modifier.fillMaxSize(),
+        //             color = MaterialTheme.colorScheme.background
+        //         ) {
+        //             Greeting("Android HELLO")
+        //         }
+        //     }
         // }
     }
 }
