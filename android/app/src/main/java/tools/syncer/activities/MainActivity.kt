@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -15,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.documentfile.provider.DocumentFile
 import com.google.android.gms.auth.api.identity.SignInClient
 import net.openid.appauth.AppAuthConfiguration
 import net.openid.appauth.AuthorizationException
@@ -24,6 +26,7 @@ import net.openid.appauth.AuthorizationServiceConfiguration
 import net.openid.appauth.ResponseTypeValues
 import tools.syncer.ui.theme.SyncerTheme
 import tools.syncer.activities.ScrollingActivity
+import java.io.File
 
 //private static final int PICKFILE_REQUEST_CODE = 100;
 
@@ -32,38 +35,30 @@ class MainActivity : ComponentActivity() {
     private lateinit var authService: AuthorizationService;
     private lateinit var config: AuthorizationServiceConfiguration;
 
-    private val EXTRA_FAILED = "failed"
+    //private val EXTRA_FAILED = "failed"
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         try{
-            val result = 1;
+            val launcher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) {uri: Uri? ->
+                val directory = DocumentFile.fromTreeUri(this, uri!!)
+                val files = directory!!.listFiles();
+                System.out.print("Hello");
 
-            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+                val intent = Intent(this, ScrollingActivity::class.java)
+                intent.putExtra("Folder", uri.toString());
+                startActivity(intent)
 
-            registerForActivityResult(intent, x -> {
-
-                                                              x
-                                                          })
-
-        // Optionally, specify a URI for the directory that should be opened in
-        // the system file picker when it loads.
-            //intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, uriToLoad);
-
-            //startActivityForResult(intent, result);
+            };
+            launcher.launch(null);
 
 
-            // val intent = Intent()
-            // intent.type = "file/*"
-            // intent.action = Intent.ACTION_GET_CONTENT
-            //launch picker screen
-            startActivity(intent)
+
         } catch (e: Exception) {
-            Log.i("SAAUTH", e.message!!)
+            Log.i("ERR", e.message!!)
         }
 
-        // val intent = Intent(this, ScrollingActivity::class.java)
-        // startActivity(intent)
+
 
         // setContent {
         //     SyncerTheme {
