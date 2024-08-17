@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -31,61 +32,39 @@ import java.io.File
 //private static final int PICKFILE_REQUEST_CODE = 100;
 
 class MainActivity : ComponentActivity() {
-    private lateinit var oneTapClient: SignInClient
-    private lateinit var authService: AuthorizationService;
-    private lateinit var config: AuthorizationServiceConfiguration;
+    private lateinit var launcher: ActivityResultLauncher<Uri?>
+    private var executeLauncher : Boolean = true
 
-    //private val EXTRA_FAILED = "failed"
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        launcher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) {uri: Uri? ->
+            val directory = DocumentFile.fromTreeUri(this, uri!!)
+            val files = directory!!.listFiles();
+            System.out.print("Hello");
 
-        try{
-            val launcher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) {uri: Uri? ->
-                val directory = DocumentFile.fromTreeUri(this, uri!!)
-                val files = directory!!.listFiles();
-                System.out.print("Hello");
+            executeLauncher = false
 
-                val intent = Intent(this, ScrollingActivity::class.java)
-                intent.putExtra("Folder", uri.toString());
-                startActivity(intent)
+            val intent = Intent(this, ScrollingActivity::class.java)
+            intent.putExtra("Folder", uri.toString());
+            //intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            startActivity(intent)
+        };
 
-            };
-            launcher.launch(null);
-
-
-
-        } catch (e: Exception) {
-            Log.i("ERR", e.message!!)
-        }
-
-
-
-        // setContent {
-        //     SyncerTheme {
-        //         // A surface container using the 'background' color from the theme
-        //         Surface(
-        //             modifier = Modifier.fillMaxSize(),
-        //             color = MaterialTheme.colorScheme.background
-        //         ) {
-        //             Greeting("Android HELLO")
-        //         }
-        //     }
-        // }
+        //launcher.launch(null)
     }
-}
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+    override fun onResume() {
+        try{
+            super.onResume()
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    SyncerTheme {
-        Greeting("Android")
+            // spagetti
+            if(executeLauncher) {
+                launcher.launch(null);
+            }
+
+            executeLauncher = true
+        } catch(e: Exception) {
+            Log.i("SAAUTH", e.message!!)
+        }
     }
 }

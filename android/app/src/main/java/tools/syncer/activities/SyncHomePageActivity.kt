@@ -44,15 +44,7 @@ class SyncHomePageActivity : ComponentActivity(), AuthorizationService.TokenResp
         //     startActivity(intent)
         // }
 
-        setContent {
-            SyncerTheme {
-                // A surface container using the 'background' color from the theme
-                Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.background
-                ) { Greeting("After Login") }
-            }
-        }
+
     }
 
     override fun onStart() {

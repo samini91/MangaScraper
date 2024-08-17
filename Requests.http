@@ -83,7 +83,15 @@ POST :url/downloadManga
 POST :url/downloadManga
 :headers
 {	
-	"pageLinkRequestUrl" :"https://mangakatana.com/manga/star-fostered-swordmaster.27126",
-	"pageLinkRequestMangaName" : "star-fostered-swordmaster"
+	"pageLinkRequestUrl" :"https://mangakatana.com/manga/nano-machine.25205",
+	"pageLinkRequestMangaName" : "NanoMachine"
+}
+#
+
+POST :url/downloadManga
+:headers
+{	
+	"pageLinkRequestUrl" :"https://mangakatana.com/manga/pick-me-up.26669",
+	"pageLinkRequestMangaName" : "PickMeUp"
 }
 #

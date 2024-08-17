@@ -1,5 +1,7 @@
 package tools.syncer.activities
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
 import com.google.android.material.appbar.CollapsingToolbarLayout
@@ -12,6 +14,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
 import androidx.documentfile.provider.DocumentFile
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -36,7 +39,6 @@ class ScrollingActivity : AppCompatActivity() {
             val files = directory!!.listFiles();
             // System.out.print("")
             //The key argument here must match that used in the other activity
-    //}
 
         try{
             binding = ActivityScrollingBinding.inflate(layoutInflater)
@@ -44,20 +46,27 @@ class ScrollingActivity : AppCompatActivity() {
 
             val rc = this.findViewById<RecyclerView>(R.id.recycler_view);
 
-            //val dataset = arrayOf("January", "February", "March");
-            val dataset = files.map { x -> x.uri };
-
-            val customAdapter = CustomAdapter(dataset);
+            // do this on a background thread
+            val bitMaps = files.map{file -> BitmapFactory.decodeStream(this.contentResolver.openInputStream(file.uri))};
+            val imagePageAdapter = ImagePageAdapter(bitMaps);
 
             rc.layoutManager = LinearLayoutManager(this);
-            rc.adapter = customAdapter;
+            rc.adapter = imagePageAdapter;
 
-            //System.out.print("Hello");
+            // onBackPressedDispatcher.addCallback(this, object: OnBackPressedCallback(true) {
+            //     override fun handleOnBackPressed() {
+            //         finish()
+            //     }
+            // })
+
 
         } catch (e: Exception) {
             Log.i("SAAUTH", e.message!!)
         }
     }
+
+
+
 }
 
 
@@ -70,7 +79,7 @@ class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
     }
 }
 
-class CustomAdapter(private val images: List<Uri>) : RecyclerView.Adapter<ViewHolder>() {
+class ImagePageAdapter(private val images: List<Bitmap>) : RecyclerView.Adapter<ViewHolder>() {
     /**
      * Provide a reference to the type of views that you are using
      * (custom ViewHolder)
@@ -91,7 +100,8 @@ class CustomAdapter(private val images: List<Uri>) : RecyclerView.Adapter<ViewHo
         // Get element from your dataset at this position and replace the
         // contents of the view with that element
         //viewHolder.textView.text = dataSet[position]
-        viewHolder.imageView.setImageURI(images[position])
+        //viewHolder.imageView.setImageURI(images[position])
+        viewHolder.imageView.setImageBitmap(images[position])
         //viewHolder.imageView.scaleType = ImageView.ScaleType.CENTER_CROP
     }
 
