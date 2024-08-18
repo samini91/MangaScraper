@@ -9,7 +9,7 @@ module ScraperData
     getMangaWebSite,
     getMangaWebSiteUrl,
     getMangaWebSiteWithUrl,
-    getMangaWebSiteWithUrlList,
+    --getMangaWebSiteWithUrlList,
     getDefaultMangaWebSite,
     PageNumber,
     DownloadChapterRequest(..),
@@ -63,9 +63,8 @@ getMangaWebSiteWithUrl s
   where
     toLowerString = map toLower
 
-getMangaWebSiteWithUrlList :: [Url] -> [MangaWebSite]
-getMangaWebSiteWithUrlList [] = []
-getMangaWebSiteWithUrlList (x:xs) = maybeToList (getMangaWebSiteWithUrl x) ++ (getMangaWebSiteWithUrlList $ xs)
+--getMangaWebSiteWithUrlList :: Url -> [MangaWebSite]
+--getMangaWebSiteWithUrlList (x:xs) = maybeToList (getMangaWebSiteWithUrl x) ++ (getMangaWebSiteWithUrlList $ xs)
 
 newtype Url = Url {urlValue :: String} deriving (Show,Eq ,Generic)
 instance FromJSON Url

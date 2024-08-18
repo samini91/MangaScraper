@@ -1,6 +1,7 @@
 module Utils
   (
-    mapConcurrentlyWithLimit
+    mapConcurrentlyWithLimit,
+    maybeToEither
   )
   where
 import Control.Monad.IO.Class (MonadIO)
@@ -16,5 +17,8 @@ mapConcurrentlyWithLimit fn list limit =
 
 
 
-
-
+maybeToEither :: a -> Maybe b -> Either a b
+maybeToEither def m = case m of
+                        Just m -> return m
+                        Nothing -> Left def
+  

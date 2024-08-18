@@ -2,10 +2,12 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE InstanceSigs #-}
 
 module Scraper
     (
-      timeoutMaybe,
+      timeout,
       grabPageWithRetry,
       grabPages,
       grabPage,
@@ -16,6 +18,7 @@ module Scraper
 
 import qualified Data.Text as T
 import Control.Monad.Trans.Maybe
+import Control.Monad.Trans.Except
 import Control.Applicative
 import Control.Exception.Lifted
 import Test.WebDriver
@@ -23,13 +26,27 @@ import Test.WebDriver.Commands.Wait
 import Text.HTML.TagSoup
 import Text.HTML.Scalpel
 import ScraperData
+import Infra (Env(..))
+import System.Log.FastLogger
+import Control.Lens
+import Control.Monad.IO.Class
+import Utils
+import Data.Text
+--import Data.Either.Extra
 
-timeoutMaybe :: forall a. WD a -> WD (Maybe a)
-timeoutMaybe x = do
-  result <- (Control.Exception.Lifted.try x) :: WD (Either SomeException a)
+data MangaSiteNotFoundException = MangaSiteNotFoundException deriving (Show)
+instance Exception MangaSiteNotFoundException
+
+instance ToLogStr SomeException where
+  toLogStr :: SomeException -> LogStr
+  toLogStr x = toLogStr $ show x
+
+timeout :: forall a. WD a -> WD (Either SomeException a)
+timeout x = do
+  result <- Control.Exception.Lifted.try x :: WD (Either SomeException a)
   case result of
-    Left _ -> closeSession >> return Nothing
-    Right z -> return $ Just (z)
+    Left err -> closeSession >> return (Left err)
+    Right z -> return $ return z
 
 parseAllChapters :: MangaWebSite -> [Tag String] -> [(String,String)]
 -- hmm need to figure out why the compiler is complaining about matching _ _
@@ -72,21 +89,40 @@ grabPageWithRetry x =  mapRetry
     config = defaultConfig{wdCapabilities = caps}
     caps = allCaps {additionalCaps = [("pageLoadStrategy","none")]}
 
-grabPageRemoveRedundancy :: [Url] ->  IO (MangaWebSite, T.Text)
-grabPageRemoveRedundancy x =
+grabPageRemoveRedundancy :: Env -> Url ->  IO (MangaWebSite, T.Text)
+grabPageRemoveRedundancy env x =
   do
-    z <- runMaybeT ((grabPageWithRetryMaybe x) <|> (grabPageWithRetryMaybe x))
-    case z of Just e -> return e
-              Nothing -> return (getDefaultMangaWebSite, "")
-
---grabPageWithRetryMaybe :: [Url] ->  IO (Maybe (MangaWebSite, T.Text))
-grabPageWithRetryMaybe :: [Url] ->  MaybeT IO (MangaWebSite, T.Text)
-grabPageWithRetryMaybe x = MaybeT mapRetry
+    --z <- runExceptT ((grabPageWithRetryMaybe x) <|> (grabPageWithRetryMaybe x) <|> (grabPageWithRetryMaybe x))
+    -- 
+    z <- runExceptT ((mapErr x) <|> (mapErr x)  <|> (mapErr x))
+    --z <- runExceptT (asum $ Prelude.take 3 listOfComps)
+    case z of Right e -> return e
+              Left err ->
+                do
+                  _ <- env.logFunc $ toLogStr err
+                  return (getDefaultMangaWebSite, "")
   where
-    mapRetry = doMapM mangaSites (runSession firefoxConfig . timeoutMaybe . logic )
+    listOfComps = repeat (mapErr x)
+    mapErr :: Url -> ExceptT String IO (MangaWebSite, Text)
+    mapErr x = withExceptT (\x -> show x) (grabPageWithRetryMaybe x)
+
+grabPageWithRetryMaybe :: Url ->  ExceptT SomeException IO (MangaWebSite, T.Text)
+grabPageWithRetryMaybe x = mapRetry
+  where
+
+    mapRetry :: ExceptT SomeException IO (MangaWebSite, T.Text)
+    mapRetry = do
+      m <- extract
+      ExceptT $ runSession firefoxConfig $ (timeout $ logic m)
+
     logic y = grabPageManga y >>= (\z -> return (y,z))
     firefoxConfig = useBrowser firefox defaultConfig
-    mangaSites = getMangaWebSiteWithUrlList x
+
+    extract :: ExceptT SomeException IO MangaWebSite
+    extract = ExceptT (return mangaSite)
+
+    mangaSite :: Either SomeException MangaWebSite
+    mangaSite = maybeToEither (toException MangaSiteNotFoundException) (getMangaWebSiteWithUrl x)
 
 doMapM :: [a] -> (a -> IO (Maybe b)) -> IO (Maybe b)
 doMapM x f = runMaybeT $ mapM' x f

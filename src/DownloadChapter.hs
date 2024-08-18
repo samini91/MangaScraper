@@ -35,7 +35,7 @@ import Infra (Env(..))
 
 download :: Env -> DownloadChapterRequest -> IO DownloadInfo
 download env u = do
-  m <- grabPageRemoveRedundancy $ [getMangaWebSiteUrl (link u)]
+  m <- grabPageRemoveRedundancy env (getMangaWebSiteUrl (link u))
   let log = getMangaWebSiteUrl (link u)
   _ <- env.logFunc $ toLogStr (show log)
   let z = snd m
