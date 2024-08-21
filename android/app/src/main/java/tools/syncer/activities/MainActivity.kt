@@ -29,28 +29,28 @@ import tools.syncer.ui.theme.SyncerTheme
 import tools.syncer.activities.ScrollingActivity
 import java.io.File
 
-//private static final int PICKFILE_REQUEST_CODE = 100;
+// First time and when we navigate back from scrollingactivity
+// First time in oncreate
 
 class MainActivity : ComponentActivity() {
     private lateinit var launcher: ActivityResultLauncher<Uri?>
-    private var executeLauncher : Boolean = true
+    //private var executeLauncher : Boolean = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         launcher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) {uri: Uri? ->
-            val directory = DocumentFile.fromTreeUri(this, uri!!)
-            val files = directory!!.listFiles();
-            System.out.print("Hello");
 
-            executeLauncher = false
-
+            //executeLauncher = false
+            
             val intent = Intent(this, ScrollingActivity::class.java)
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK )
             intent.putExtra("Folder", uri.toString());
-            //intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+
             startActivity(intent)
         };
 
-        //launcher.launch(null)
+        launcher.launch(null);
     }
 
     override fun onResume() {
@@ -58,13 +58,15 @@ class MainActivity : ComponentActivity() {
             super.onResume()
 
             // spagetti
-            if(executeLauncher) {
-                launcher.launch(null);
-            }
+            //if(executeLauncher) {
+            
+        //}
 
-            executeLauncher = true
+                //executeLauncher = true
         } catch(e: Exception) {
             Log.i("SAAUTH", e.message!!)
         }
     }
 }
+
+

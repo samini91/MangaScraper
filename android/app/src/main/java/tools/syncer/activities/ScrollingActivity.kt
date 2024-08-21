@@ -1,5 +1,7 @@
 package tools.syncer.activities
 
+import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -18,15 +20,18 @@ import androidx.activity.OnBackPressedCallback
 import androidx.documentfile.provider.DocumentFile
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import tools.syncer.MainActivity
 import tools.syncer.R
 import tools.syncer.databinding.ActivityScrollingBinding
 
 class ScrollingActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityScrollingBinding
+    private lateinit var context: Context
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        context = this
 
         val extras = getIntent().getExtras();
         //if (extras != null) {
@@ -53,11 +58,16 @@ class ScrollingActivity : AppCompatActivity() {
             rc.layoutManager = LinearLayoutManager(this);
             rc.adapter = imagePageAdapter;
 
-            // onBackPressedDispatcher.addCallback(this, object: OnBackPressedCallback(true) {
-            //     override fun handleOnBackPressed() {
-            //         finish()
-            //     }
-            // })
+            onBackPressedDispatcher.addCallback(this, object: OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    finish()
+
+                    val intent = Intent(context, MainActivity::class.java)
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK )
+
+                    startActivity(intent)
+                }
+            })
 
 
         } catch (e: Exception) {
