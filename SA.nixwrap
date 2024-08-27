@@ -4,11 +4,6 @@ Build:
 	stack build --allow-different-user --ghc-options="-Wall -fwarn-incomplete-uni-patterns"
 Run:
 	stack exec MangaScraper-exe --allow-different-user
-StartSeleniumServer:
-	java -jar selenium-server-standalone-3.4.0.jar
-
-StartSeleniumServerNix:
-	selenium-server
 
 StartSeleniumServerDocker:
 	docker run -d -p 4444:4444 -p 7900:7900 --shm-size="2g" selenium/standalone-firefox:2.53.1
