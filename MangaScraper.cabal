@@ -53,9 +53,9 @@ library
                      , call-stack
                      , monad-parallel
                      , fast-logger
-                     
+                     , zip-archive
+                     , filepath
 
-                     
   default-language:    Haskell2010
 
 executable MangaScraper-exe

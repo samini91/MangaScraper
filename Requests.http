@@ -10,6 +10,12 @@ POST :url/download
 {	
 "downloadRequestUrl" : "http://mangakatana.com/manga/berserk.1087/c0.1"
 }
+#
+POST :url/download
+:headers
+{	
+"downloadRequestUrl" : "https://mangakatana.com/manga/the-ember-knight.25919"
+}
 
 #
 POST :url/save
@@ -61,8 +67,8 @@ POST :url/downloadManga
 POST :url/downloadManga
 :headers
 {	
-	"pageLinkRequestUrl" :["https://mangakakalot.com/manga/mh918849"],
-	"pageLinkRequestMangaName" : "leveling guide or something"
+	"pageLinkRequestUrl" :["https://mangakatana.com/manga/the-ember-knight.25919"],
+	"pageLinkRequestMangaName" : "Ember Knight"
 }
 #
 #
@@ -83,15 +89,15 @@ POST :url/downloadManga
 POST :url/downloadManga
 :headers
 {	
-	"pageLinkRequestUrl" :"https://mangakatana.com/manga/nano-machine.25205",
-	"pageLinkRequestMangaName" : "NanoMachine"
+	"pageLinkRequestUrl" :"https://mangakatana.com/manga/the-ember-knight.25919",
+	"pageLinkRequestMangaName" : "Ember Knight"
 }
 #
 
 POST :url/downloadManga
 :headers
 {	
-	"pageLinkRequestUrl" :"https://mangakatana.com/manga/pick-me-up.26669",
-	"pageLinkRequestMangaName" : "PickMeUp"
+	"pageLinkRequestUrl" :"https://mangakatana.com/manga/gachiakuta.26182",
+	"pageLinkRequestMangaName" : "Gachiakuta"
 }
 #

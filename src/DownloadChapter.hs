@@ -9,6 +9,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module DownloadChapter
   (
@@ -22,6 +23,7 @@ import Text.HTML.TagSoup
 import Text.HTML.Scalpel
 import Control.Concurrent.Async
 import System.Directory
+import System.FilePath (dropTrailingPathSeparator)
 import Network.Wreq
 import Control.Lens
 import Scraper
@@ -32,6 +34,8 @@ import Network.HTTP.Client (HttpException (HttpExceptionRequest))
 import Control.Exception.Lifted
 import System.Log.FastLogger
 import Infra (Env(..))
+import qualified Codec.Archive.Zip as Zip
+import Control.Monad (foldM)
 
 download :: Env -> DownloadChapterRequest -> IO DownloadInfo
 download env u = do
@@ -42,13 +46,51 @@ download env u = do
   let strHtml = T.unpack z
   let x = parseImages (fst m) (parseTags strHtml)
   res <- saveFiles (downloadInfoUrl x)
-  return (DownloadInfo { downloadInfoUrl = x.downloadInfoUrl })
+  let allFiles = sequenceA res
+  let downloadInfo = case allFiles of
+        Right filePaths -> do
+          let zipPath = maybe "manga/unknown.cbz" (\fp -> dropTrailingPathSeparator (fromRelDir fp) ++ ".cbz") filePath
+          _ <- createZipFile zipPath filePaths
+          _ <- env.logFunc $ toLogStr ("Created zip file: " ++ zipPath)
+          case filePath of
+            Just fp -> do
+              let folderPath = fromRelDir fp
+              removeDirectoryRecursive folderPath
+              _ <- env.logFunc $ toLogStr ("Deleted folder: " ++ folderPath)
+              return ()
+            Nothing -> return ()
+          return (DownloadInfo { downloadInfoUrl = x.downloadInfoUrl })
+        Left err -> do
+          _ <- env.logFunc $ toLogStr ("Error downloading files: " ++ show err)
+          return (DownloadInfo { downloadInfoUrl = x.downloadInfoUrl })
+  downloadInfo
   where
       filePath = mangaFilePath (downloadChapterRequestMangaName u) chapterNumber
       saveWithPath y = catchHttpException $ saveFile filePath y
       saveFiles y = mapConcurrently saveWithPath (filter (\x -> urlValue (snd x) /= "http://") y)
       chapterNumber = (addPadding 4 (downloadChapterRequestNumber u)) ++ "_" ++ pageLinkChapterName (downloadChapterRequestLink u)
       link r = pageLinkUrl $ downloadChapterRequestLink r
+
+
+createZipFromFiles :: [FilePath] -> IO Zip.Archive
+createZipFromFiles filepaths = do
+  foldM addFileToArchive Zip.emptyArchive filepaths
+  where
+    addFileToArchive acc filepath = do
+      content <- B.readFile filepath
+      return $ Zip.addEntryToArchive (Zip.toEntry filepath 0 content) acc
+
+createZipFile :: FilePath -> [FilePath] -> IO FilePath
+createZipFile outputZipPath inputFiles = do
+  archive <- createZipFromFiles inputFiles
+  B.writeFile outputZipPath (Zip.fromArchive archive)
+  return outputZipPath
+
+--createZipFile :: Maybe(Path Rel Dir) -> IO FilePath
+--createZipFile pathOfManga = do
+  --let successfulImages = [img | Right img <- imageData]
+--  let archive = foldr (\(filename, content) acc -> Zip.addEntryToArchive (Zip.toEntry filename 0 content) acc) Zip.emptyArchive successfulImages
+--  return createDirectoryIfMissing True (takeDirectory zipFilePath)
 
 catchHttpException:: forall a . IO a -> IO (Either HttpException a) -- pass in the path instead
 catchHttpException x = Control.Exception.Lifted.try x  :: IO (Either HttpException a)
@@ -59,7 +101,7 @@ saveFile p x = do
   let z = m ^. responseBody
   createDirectoryIfMissing True filePath -- get string representation here return FilePath of "" if maybe is empty
   B.writeFile fileName z
-  return filePath
+  return fileName
   where
     filePath = case (fromRelDir <$> p) of
                  Nothing -> ""
@@ -112,7 +154,7 @@ mangaFilePath a b = do
   _1 <- parseRelDir a
   _2 <- parseRelDir b
   return (_0 </> _1 </> _2)
-  
+
 
 
 
