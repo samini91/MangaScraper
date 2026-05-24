@@ -22,8 +22,7 @@ import ScraperData
 import Text.HTML.TagSoup
 import Text.HTML.Scalpel
 import Control.Concurrent.Async
-import System.Directory
-import System.Directory (removeFile)
+import System.Directory (createDirectoryIfMissing, removeDirectoryRecursive, removeFile)
 import System.FilePath (dropTrailingPathSeparator)
 import Network.Wreq
 import Control.Lens
