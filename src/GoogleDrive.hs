@@ -28,6 +28,7 @@ import System.FilePath ((</>), takeDirectory, splitDirectories)
 import Control.Exception (catch, SomeException)
 import qualified Data.Map.Strict as Map
 import Data.IORef
+import System.Posix.Files (setFileMode, unionFileModes, ownerReadMode, ownerWriteMode)
 
 -- | Configuration for Google Drive integration
 data DriveConfig = DriveConfig
@@ -190,4 +191,25 @@ ensureFolderPath config accessToken path = do
 
 -- | Upload file to Google Drive
 uploadFile :: DriveConfig -> AccessToken -> FilePath -> FilePath -> IO (Either DriveError DriveFileId)
-uploadFile = undefined
+uploadFile config accessToken localPath drivePath = do
+  -- Check if local file exists
+  exists <- doesFileExist localPath
+  if not exists
+    then return $ Left $ FileNotFound localPath
+    else do
+      -- Extract folder path and file name
+      let driveFolder = takeDirectory drivePath
+      let fileName = last $ splitDirectories drivePath
+
+      -- Ensure folder exists
+      folderResult <- ensureFolderPath config accessToken driveFolder
+      case folderResult of
+        Left err -> return $ Left err
+        Right (FolderId parentId) -> do
+          -- For now, return a placeholder error since we need actual Google Drive API calls
+          -- In a real implementation, this would:
+          -- 1. Read file content from localPath
+          -- 2. Make multipart/related POST to Drive API v3
+          -- 3. Include file metadata (name, parents) and file content
+          -- 4. Return file ID from response
+          return $ Left $ NetworkError "File upload not yet implemented - requires Google Drive API integration"
