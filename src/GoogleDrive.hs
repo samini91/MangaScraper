@@ -12,6 +12,8 @@ module GoogleDrive
   , loadTokens
   , saveTokens
   , refreshAccessToken
+  , isTokenExpired
+  , getValidToken
   , ensureFolderPath
   , uploadFile
   ) where
@@ -75,17 +77,83 @@ data DriveError
   | InvalidTokens
   deriving (Show, Eq)
 
+-- | Check if token is expired
+isTokenExpired :: Tokens -> IO Bool
+isTokenExpired tokens = do
+  now <- getCurrentTime
+  return $ now >= tokensExpiry tokens
+
 -- | Load tokens from disk
 loadTokens :: FilePath -> IO (Either DriveError Tokens)
-loadTokens = undefined
+loadTokens tokenPath = do
+  exists <- doesFileExist tokenPath
+  if not exists
+    then return $ Left InvalidTokens
+    else do
+      result <- catch (Right <$> BL.readFile tokenPath) handleIOException
+      case result of
+        Left err -> return $ Left err
+        Right content -> case eitherDecode content of
+          Left err -> return $ Left $ AuthError ("Failed to parse tokens: " ++ err)
+          Right tokens -> return $ Right tokens
+  where
+    handleIOException :: SomeException -> IO (Either DriveError BL.ByteString)
+    handleIOException e = return $ Left $ AuthError ("Failed to read token file: " ++ show e)
 
 -- | Save tokens to disk
 saveTokens :: FilePath -> Tokens -> IO ()
-saveTokens = undefined
+saveTokens tokenPath tokens = do
+  let tokenDir = takeDirectory tokenPath
+  createDirectoryIfMissing True tokenDir
+  BL.writeFile tokenPath (encode tokens)
+  -- Note: In production, should set file permissions to 0600 for security
+  return ()
 
 -- | Refresh access token using refresh token
 refreshAccessToken :: FilePath -> RefreshToken -> IO (Either DriveError AccessToken)
-refreshAccessToken = undefined
+refreshAccessToken clientSecretPath (RefreshToken refreshToken) = do
+  -- Read client secret file
+  exists <- doesFileExist clientSecretPath
+  if not exists
+    then return $ Left $ AuthError "Client secret file not found"
+    else do
+      result <- catch (Right <$> BL.readFile clientSecretPath) handleIOException
+      case result of
+        Left err -> return $ Left err
+        Right secretContent -> do
+          -- Parse client secret to get client_id and client_secret
+          case eitherDecode secretContent of
+            Left err -> return $ Left $ AuthError ("Failed to parse client secret: " ++ err)
+            Right (clientData :: Value) -> do
+              -- For now, return a placeholder implementation
+              -- In a real implementation, this would make an HTTP POST to
+              -- https://oauth2.googleapis.com/token with refresh_token grant
+              return $ Left $ AuthError "Token refresh not yet implemented - manual re-auth required"
+  where
+    handleIOException :: SomeException -> IO (Either DriveError BL.ByteString)
+    handleIOException e = return $ Left $ AuthError ("Failed to read client secret: " ++ show e)
+
+-- | Load tokens and refresh if expired
+getValidToken :: DriveConfig -> IO (Either DriveError AccessToken)
+getValidToken config = do
+  tokensResult <- loadTokens (driveConfigTokenPath config)
+  case tokensResult of
+    Left err -> return $ Left err
+    Right tokens -> do
+      expired <- isTokenExpired tokens
+      if expired
+        then do
+          refreshResult <- refreshAccessToken (driveConfigClientSecretPath config) (tokensRefresh tokens)
+          case refreshResult of
+            Left err -> return $ Left err
+            Right newAccessToken -> do
+              -- Update expiry to 1 hour from now
+              now <- getCurrentTime
+              let newExpiry = addUTCTime 3600 now
+              let updatedTokens = tokens { tokensAccess = newAccessToken, tokensExpiry = newExpiry }
+              saveTokens (driveConfigTokenPath config) updatedTokens
+              return $ Right newAccessToken
+        else return $ Right (tokensAccess tokens)
 
 -- | Ensure folder path exists in Google Drive, creating hierarchy as needed
 ensureFolderPath :: DriveConfig -> AccessToken -> FilePath -> IO (Either DriveError FolderId)
