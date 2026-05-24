@@ -28,7 +28,6 @@ import System.FilePath ((</>), takeDirectory, splitDirectories)
 import Control.Exception (catch, SomeException)
 import qualified Data.Map.Strict as Map
 import Data.IORef
-import Data.List (intercalate)
 
 -- | Configuration for Google Drive integration
 data DriveConfig = DriveConfig
