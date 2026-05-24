@@ -23,6 +23,7 @@ import Text.HTML.TagSoup
 import Text.HTML.Scalpel
 import Control.Concurrent.Async
 import System.Directory
+import System.Directory (removeFile)
 import System.FilePath (dropTrailingPathSeparator)
 import Network.Wreq
 import Control.Lens
@@ -35,7 +36,8 @@ import Control.Exception.Lifted
 import System.Log.FastLogger
 import Infra (Env(..))
 import qualified Codec.Archive.Zip as Zip
-import Control.Monad (foldM)
+import Control.Monad (foldM, when)
+import qualified GoogleDrive as GD
 
 download :: Env -> DownloadChapterRequest -> IO DownloadInfo
 download env u = do
@@ -59,6 +61,16 @@ download env u = do
               _ <- env.logFunc $ toLogStr ("Deleted folder: " ++ folderPath)
               return ()
             Nothing -> return ()
+
+          -- Attempt upload to Google Drive
+          uploadSuccess <- attemptUpload env zipPath zipPath
+
+          -- Delete local CBZ if upload succeeded
+          when uploadSuccess $ do
+            removeFile zipPath
+            _ <- env.logFunc $ toLogStr ("Deleted local file after successful upload: " ++ zipPath)
+            return ()
+
           return (DownloadInfo { downloadInfoUrl = x.downloadInfoUrl })
         Left err -> do
           _ <- env.logFunc $ toLogStr ("Error downloading files: " ++ show err)
@@ -71,6 +83,41 @@ download env u = do
       chapterNumber = (addPadding 4 (downloadChapterRequestNumber u)) ++ "_" ++ pageLinkChapterName (downloadChapterRequestLink u)
       link r = pageLinkUrl $ downloadChapterRequestLink r
 
+-- | Attempt to upload file to Google Drive
+attemptUpload :: Env -> FilePath -> FilePath -> IO Bool
+attemptUpload env localPath drivePath = do
+  case driveConfig env of
+    Nothing -> do
+      -- Drive not configured, skip upload
+      return False
+    Just config -> do
+      _ <- env.logFunc $ toLogStr ("Uploading to Google Drive: " ++ drivePath)
+      tokenResult <- GD.getValidToken config
+      case tokenResult of
+        Left (GD.AuthError err) -> do
+          _ <- env.logFunc $ toLogStr ("Google Drive authentication failed: " ++ err ++ ". Tokens may be revoked. Keeping local file.")
+          return False
+        Left (GD.NetworkError err) -> do
+          _ <- env.logFunc $ toLogStr ("Network error uploading to Google Drive: " ++ err ++ ". Keeping local file.")
+          return False
+        Left (GD.FileNotFound fp) -> do
+          _ <- env.logFunc $ toLogStr ("File not found: " ++ fp ++ ". Keeping local file.")
+          return False
+        Left GD.InvalidTokens -> do
+          _ <- env.logFunc $ toLogStr ("Google Drive authentication failed. Tokens invalid. Run auth setup again. Keeping local file.")
+          return False
+        Right accessToken -> do
+          uploadResult <- GD.uploadFile config accessToken localPath drivePath
+          case uploadResult of
+            Left (GD.NetworkError err) -> do
+              _ <- env.logFunc $ toLogStr ("Failed to upload to Google Drive: " ++ err ++ ". Keeping local file.")
+              return False
+            Left err -> do
+              _ <- env.logFunc $ toLogStr ("Failed to upload to Google Drive: " ++ show err ++ ". Keeping local file.")
+              return False
+            Right (GD.DriveFileId fileId) -> do
+              _ <- env.logFunc $ toLogStr ("Successfully uploaded to Google Drive: " ++ fileId)
+              return True
 
 createZipFromFiles :: [FilePath] -> IO Zip.Archive
 createZipFromFiles filepaths = do
