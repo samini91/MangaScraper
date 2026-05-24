@@ -28,7 +28,6 @@ import System.FilePath ((</>), takeDirectory, splitDirectories)
 import Control.Exception (catch, SomeException)
 import qualified Data.Map.Strict as Map
 import Data.IORef
-import System.Posix.Files (setFileMode, unionFileModes, ownerReadMode, ownerWriteMode)
 
 -- | Configuration for Google Drive integration
 data DriveConfig = DriveConfig
@@ -199,7 +198,8 @@ uploadFile config accessToken localPath drivePath = do
     else do
       -- Extract folder path and file name
       let driveFolder = takeDirectory drivePath
-      let fileName = last $ splitDirectories drivePath
+      let pathParts = splitDirectories drivePath
+      let fileName = if null pathParts then "" else last pathParts
 
       -- Ensure folder exists
       folderResult <- ensureFolderPath config accessToken driveFolder
