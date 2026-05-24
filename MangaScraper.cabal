@@ -55,6 +55,10 @@ library
                      , fast-logger
                      , zip-archive
                      , filepath
+                     , gogol-core
+                     , gogol-drive
+                     , gogol-auth
+                     , time
 
   default-language:    Haskell2010
 
