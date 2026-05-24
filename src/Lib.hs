@@ -4,7 +4,6 @@
 {-# LANGUAGE DataKinds       #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeOperators   #-}
-{-# LANGUAGE OverloadedStrings #-}
 module Lib
     ( startApp
     , app
@@ -19,8 +18,10 @@ import Infra (Env (..))
 import GoogleDrive (DriveConfig(..))
 import System.Environment (lookupEnv)
 import System.Directory (getHomeDirectory, doesFileExist)
+import System.FilePath ((</>))
 import qualified Data.Map.Strict as Map
 import Data.IORef
+import Data.Maybe (fromMaybe)
 
 type API = "downloadManga" :> ReqBody '[JSON] PageLinkRequest :> Post '[JSON] [PageLink]
 
@@ -28,12 +29,12 @@ type API = "downloadManga" :> ReqBody '[JSON] PageLinkRequest :> Post '[JSON] [P
 loadDriveConfig :: IO (Maybe DriveConfig)
 loadDriveConfig = do
   homeDir <- getHomeDirectory
-  let defaultTokenPath = homeDir ++ "/.mangascraper/google_tokens.json"
-  let defaultSecretPath = homeDir ++ "/.mangascraper/client_secret.json"
+  let defaultTokenPath = homeDir </> ".mangascraper/google_tokens.json"
+  let defaultSecretPath = homeDir </> ".mangascraper/client_secret.json"
 
   -- Check for custom paths from environment
   customSecretPath <- lookupEnv "MANGASCRAPER_CLIENT_SECRET"
-  let secretPath = maybe defaultSecretPath id customSecretPath
+  let secretPath = fromMaybe defaultSecretPath customSecretPath
 
   -- Check if token file exists (indicates Drive is configured)
   tokenExists <- doesFileExist defaultTokenPath
@@ -62,9 +63,6 @@ startApp = do
   
 app :: Env -> Application
 app env = serve api (server env)
---  where
---    env :: Env
---    env = Env {logger = newFastLogger (LogStdout 100)}
 
 api :: Servant.Proxy API
 api = Servant.Proxy
