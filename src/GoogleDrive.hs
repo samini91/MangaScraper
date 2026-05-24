@@ -28,6 +28,7 @@ import System.FilePath ((</>), takeDirectory, splitDirectories)
 import Control.Exception (catch, SomeException)
 import qualified Data.Map.Strict as Map
 import Data.IORef
+import Data.List (intercalate)
 
 -- | Configuration for Google Drive integration
 data DriveConfig = DriveConfig
@@ -155,9 +156,38 @@ getValidToken config = do
               return $ Right newAccessToken
         else return $ Right (tokensAccess tokens)
 
+-- | Create folder hierarchy recursively
+createFolderHierarchy :: DriveConfig -> AccessToken -> FolderId -> [FilePath] -> IO (Either DriveError FolderId)
+createFolderHierarchy _ _ parentId [] = return $ Right parentId
+createFolderHierarchy config accessToken parentId (folderName:rest) = do
+  -- For now, return a placeholder error since we need actual Google Drive API calls
+  -- In a real implementation, this would:
+  -- 1. Search for folder with name under parentId
+  -- 2. If found, use that folder ID
+  -- 3. If not found, create new folder
+  -- 4. Recurse with remaining path components
+  return $ Left $ NetworkError "Folder creation not yet implemented - requires Google Drive API integration"
+
 -- | Ensure folder path exists in Google Drive, creating hierarchy as needed
 ensureFolderPath :: DriveConfig -> AccessToken -> FilePath -> IO (Either DriveError FolderId)
-ensureFolderPath = undefined
+ensureFolderPath config accessToken path = do
+  -- Check cache first
+  cache <- readIORef (driveFolderCache config)
+  case Map.lookup path cache of
+    Just folderId -> return $ Right folderId
+    Nothing -> do
+      -- Split path into components
+      let pathComponents = splitDirectories path
+      -- Start from root or configured root folder
+      let rootFolderId = maybe "root" id (driveConfigRootFolderId config)
+      -- Create folders one by one
+      result <- createFolderHierarchy config accessToken (FolderId rootFolderId) pathComponents
+      case result of
+        Right folderId -> do
+          -- Cache the result
+          modifyIORef' (driveFolderCache config) (Map.insert path folderId)
+          return $ Right folderId
+        Left err -> return $ Left err
 
 -- | Upload file to Google Drive
 uploadFile :: DriveConfig -> AccessToken -> FilePath -> FilePath -> IO (Either DriveError DriveFileId)
