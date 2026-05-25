@@ -61,6 +61,10 @@ library
                      , gogol-core >= 1.0 && < 1.1
                      , gogol-drive >= 1.0 && < 1.1
                      , time
+                     , resourcet
+                     , process
+                     , microlens
+                     , lens-aeson
 
 
   default-language:    Haskell2010

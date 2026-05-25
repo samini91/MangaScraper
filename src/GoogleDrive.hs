@@ -17,6 +17,8 @@ module GoogleDrive
   , getValidToken
   , ensureFolderPath
   , uploadFile
+  , performInitialAuth
+  , loadOAuthClient
   ) where
 
 import GHC.Generics
@@ -26,9 +28,54 @@ import qualified Data.Text as T
 import qualified Data.ByteString.Lazy as BL
 import System.Directory (getHomeDirectory, createDirectoryIfMissing, doesFileExist)
 import System.FilePath ((</>), takeDirectory, splitDirectories)
-import Control.Exception (catch, SomeException)
+import Control.Exception (SomeException, catch)
 import qualified Data.Map.Strict as Map
 import Data.IORef
+import Gogol.Auth.TokenFile
+import qualified Data.ByteString as BS
+import Control.Monad (void)
+import Control.Monad.Catch (throwM, try)
+import Control.Monad.Trans.Resource (runResourceT)
+import System.Info (os)
+import System.Process (rawSystem)
+import System.Exit (ExitCode(..))
+import System.IO (hFlush, stdout)
+import Network.HTTP.Client (Manager, newManager)
+import Network.HTTP.Client.TLS (tlsManagerSettings)
+import Gogol
+  ( Env
+  , newEnv
+  , send
+  , upload
+  )
+import Gogol.Auth
+  ( Credentials(..)
+  , OAuthClient(..)
+  , OAuthCode(..)
+  , ClientId(..)
+  )
+import Gogol.Auth.InstalledApplication
+  ( installedApplication
+  , formAccessTypeURL
+  , AccessType(..)
+  )
+import Gogol.Auth.ServiceAccount (authorizedUserToken, AuthorizedUser(..))
+import Gogol.Drive
+  ( Drive'File
+  , DriveFilesList
+  , DriveFilesCreate
+  , File
+  , FileList
+  , newDriveFilesList
+  , newDriveFilesCreate
+  , newFile
+  )
+import Gogol.Drive.Types
+  ( file
+  )
+import Data.Proxy (Proxy(..))
+import Lens.Micro ((^?), (^.), (.~))
+import Data.Aeson.Lens (key, _String)
 
 -- | Configuration for Google Drive integration
 data DriveConfig = DriveConfig
@@ -214,3 +261,13 @@ uploadFile config accessToken localPath drivePath = do
           -- 3. Include file metadata (name, parents) and file content
           -- 4. Return file ID from response
           return $ Left $ NetworkError "File upload not yet implemented - requires Google Drive API integration"
+
+-- | Placeholder for initial OAuth authentication flow
+-- TODO: Implement in Task 2
+performInitialAuth :: IO (Either DriveError Tokens)
+performInitialAuth = return $ Left $ AuthError "performInitialAuth not yet implemented"
+
+-- | Placeholder for loading OAuth client configuration
+-- TODO: Implement in Task 2
+loadOAuthClient :: FilePath -> IO (Either DriveError OAuthClient)
+loadOAuthClient _ = return $ Left $ AuthError "loadOAuthClient not yet implemented"
