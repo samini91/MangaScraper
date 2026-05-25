@@ -42,7 +42,11 @@ packages:
 # Dependency packages to be pulled from upstream that are not in the resolver
 # using the same syntax as the packages field.
 # (e.g., acme-missiles-0.3)
-# extra-deps: []
+extra-deps:
+  - gogol-1.0.0.0
+  - gogol-core-1.0.0.0
+  - gogol-drive-1.0.0
+  - base64-1.0@sha256:7f92c1268e6fa191b41abab53313201644af756f3fdd7e99edf3c875e6ba02a4,2904
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

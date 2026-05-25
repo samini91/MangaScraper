@@ -26,6 +26,7 @@ library
   build-depends:       base >= 4.7 && < 5
                      , aeson
                      , text
+                     , containers
                      , servant-server
                      , wai
                      , warp
@@ -56,10 +57,11 @@ library
                      , fast-logger
                      , zip-archive
                      , filepath
-                     , gogol-core >= 0.3 && < 0.6
-                     , gogol-drive >= 0.3 && < 0.6
-                     , gogol-auth >= 0.3 && < 0.6
-                     , time >= 1.9 && < 1.15
+                     , gogol >= 1.0 && < 1.1
+                     , gogol-core >= 1.0 && < 1.1
+                     , gogol-drive >= 1.0 && < 1.1
+                     , time
+
 
   default-language:    Haskell2010
 

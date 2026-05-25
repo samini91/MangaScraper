@@ -103,7 +103,7 @@ attemptUpload env localPath drivePath = do
           _ <- env.logFunc $ toLogStr ("File not found: " ++ fp ++ ". Keeping local file.")
           return False
         Left GD.InvalidTokens -> do
-          _ <- env.logFunc $ toLogStr ("Google Drive authentication failed. Tokens invalid. Run auth setup again. Keeping local file.")
+          _ <- env.logFunc $ toLogStr ("Google Drive authentication failed. Tokens invalid. Run auth setup again. Keeping local file." :: String)
           return False
         Right accessToken -> do
           uploadResult <- GD.uploadFile config accessToken localPath drivePath

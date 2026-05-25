@@ -3,7 +3,35 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/lock_files
 
-packages: []
+packages:
+- completed:
+    hackage: gogol-1.0.0.0@sha256:b711299083a7790e15b82c3088cfe42f71849174a738e892e6e89a3f6bcf0592,3035
+    pantry-tree:
+      sha256: bf5036ea6a715dad6fd8cc125e0251509ef5d1ad600f3da4e5367e3cfb25ad2a
+      size: 1148
+  original:
+    hackage: gogol-1.0.0.0
+- completed:
+    hackage: gogol-core-1.0.0.0@sha256:da273f1596ab73930c7a2036c400295c955e71ff5ab0d460ce1e0207d9849894,2514
+    pantry-tree:
+      sha256: d4807863d39a5f5d8d04b3358d247536aed033ccfff346ea5678295387277662
+      size: 521
+  original:
+    hackage: gogol-core-1.0.0.0
+- completed:
+    hackage: gogol-drive-1.0.0@sha256:024e9dafb9d19607231ea64410d422e1ec5a4e8a8248b83704dd7d983d8aed4f,3500
+    pantry-tree:
+      sha256: fa82e980c796a2005052af02bca234c9b90aa2890d9c8798e2b3acbd1613c6bf
+      size: 4836
+  original:
+    hackage: gogol-drive-1.0.0
+- completed:
+    hackage: base64-1.0@sha256:7f92c1268e6fa191b41abab53313201644af756f3fdd7e99edf3c875e6ba02a4,2904
+    pantry-tree:
+      sha256: 3576fc8231ddcb63718a5858f6f1b43fe80f6572a88bab96445f1d6517d8ab3c
+      size: 2229
+  original:
+    hackage: base64-1.0@sha256:7f92c1268e6fa191b41abab53313201644af756f3fdd7e99edf3c875e6ba02a4,2904
 snapshots:
 - completed:
     sha256: bc144ddf301a5c99f2cf51c7de50279ba144fd4486cb3c66f87ed761d6bbf6e9
