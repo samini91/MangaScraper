@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DisambiguateRecordFields #-}
 
 module GoogleDrive
   ( DriveConfig(..)
@@ -28,13 +29,13 @@ import qualified Data.Text as T
 import qualified Data.ByteString.Lazy as BL
 import System.Directory (getHomeDirectory, createDirectoryIfMissing, doesFileExist)
 import System.FilePath ((</>), takeDirectory, splitDirectories)
-import Control.Exception (SomeException, catch)
+import Control.Exception (SomeException)
 import qualified Data.Map.Strict as Map
 import Data.IORef
 import Gogol.Auth.TokenFile
 import qualified Data.ByteString as BS
 import Control.Monad (void)
-import Control.Monad.Catch (throwM, try)
+import Control.Monad.Catch (catch, throwM, try)
 import Control.Monad.Trans.Resource (runResourceT)
 import System.Info (os)
 import System.Process (rawSystem)
@@ -48,6 +49,7 @@ import Gogol
   , send
   , upload
   )
+import qualified Gogol.Auth as GA
 import Gogol.Auth
   ( Credentials(..)
   , OAuthClient(..)
@@ -71,7 +73,9 @@ import Gogol.Drive
   , newFile
   )
 import Gogol.Drive.Types
-  ( file
+  ( File
+  , file
+  , FileList
   )
 import Data.Proxy (Proxy(..))
 import Lens.Micro ((^?), (^.), (.~))
