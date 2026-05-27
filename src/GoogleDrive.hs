@@ -57,6 +57,7 @@ import Gogol.Auth
   , OAuthCode(..)
   , ClientId(..)
   , GSecret(..)
+  , OAuthToken(..)
   )
 import Gogol.Auth.InstalledApplication
   ( installedApplication
@@ -169,26 +170,35 @@ saveTokens tokenPath tokens = do
 -- | Refresh access token using refresh token
 refreshAccessToken :: FilePath -> RefreshToken -> IO (Either DriveError AccessToken)
 refreshAccessToken clientSecretPath (RefreshToken refreshToken) = do
-  -- Read client secret file
-  exists <- doesFileExist clientSecretPath
-  if not exists
-    then return $ Left $ AuthError "Client secret file not found"
-    else do
-      result <- catch (Right <$> BL.readFile clientSecretPath) handleIOException
-      case result of
-        Left err -> return $ Left err
-        Right secretContent -> do
-          -- Parse client secret to get client_id and client_secret
-          case eitherDecode secretContent of
-            Left err -> return $ Left $ AuthError ("Failed to parse client secret: " ++ err)
-            Right (clientData :: Value) -> do
-              -- For now, return a placeholder implementation
-              -- In a real implementation, this would make an HTTP POST to
-              -- https://oauth2.googleapis.com/token with refresh_token grant
-              return $ Left $ AuthError "Token refresh not yet implemented - manual re-auth required"
+  -- 1. Load OAuth client
+  clientResult <- loadOAuthClient clientSecretPath
+
+  case clientResult of
+    Left err -> return $ Left err
+    Right (OAuthClient clientId clientSecret) -> do
+      -- 2. Create AuthorizedUser from stored refresh token
+      let authUser = AuthorizedUser
+            { _userId = clientId
+            , _userSecret = clientSecret
+            , _userRefresh = Gogol.Types.RefreshToken refreshToken
+            }
+
+      -- 3. Request new access token
+      manager <- newManager tlsManagerSettings
+
+      tokenResult <- try $ authorizedUserToken authUser Nothing logger manager
+
+      case tokenResult of
+        Left (err :: SomeException) ->
+          return $ Left $ AuthError ("Token refresh failed: " ++ show err)
+
+        Right (OAuthToken (Gogol.Types.AccessToken accessTokenText) _refreshToken _expiry) -> do
+          -- Extract the access token Text from OAuthToken
+          -- Our custom AccessToken wraps the Text
+          let newAccessToken = AccessToken accessTokenText
+          return $ Right newAccessToken
   where
-    handleIOException :: SomeException -> IO (Either DriveError BL.ByteString)
-    handleIOException e = return $ Left $ AuthError ("Failed to read client secret: " ++ show e)
+    logger _ _ = return ()  -- Silent logger for refresh operations
 
 -- | Load tokens and refresh if expired
 getValidToken :: DriveConfig -> IO (Either DriveError AccessToken)
