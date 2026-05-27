@@ -48,6 +48,7 @@ import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Gogol
   ( Env
   , newEnv
+  , newEnvWith
   , send
   , upload
   )
@@ -65,6 +66,7 @@ import Gogol.Auth.InstalledApplication
   , AccessType(..)
   )
 import Gogol.Auth.ServiceAccount (authorizedUserToken, AuthorizedUser(..))
+import Gogol.Auth.Scope (KnownScopes)
 import qualified Gogol.Types
 import Gogol.Drive
   ( Drive'File
@@ -329,3 +331,20 @@ tokensFromOAuthToken accessToken maybeRefresh expiry =
     , tokensRefresh = RefreshToken (maybe "" id maybeRefresh)
     , tokensExpiry = expiry
     }
+
+-- | Create Google Drive API environment from credentials
+newDriveEnv :: KnownScopes s => AuthorizedUser -> Manager -> IO (Env s)
+newDriveEnv authUser manager = do
+  let credentials = FromUser authUser
+  let logger = \_ _ -> return ()
+  newEnvWith credentials logger manager
+
+-- | Catch Drive API exceptions and convert to DriveError
+catchDriveErrors :: IO a -> IO (Either DriveError a)
+catchDriveErrors action =
+  (Right <$> action)
+    `catch` handleGenericException
+  where
+    handleGenericException :: SomeException -> IO (Either DriveError a)
+    handleGenericException err =
+      return $ Left $ NetworkError ("Drive API error: " ++ show err)
