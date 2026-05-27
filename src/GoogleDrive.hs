@@ -293,6 +293,13 @@ ensureFolderPath config accessToken path = do
           return $ Right folderId
         Left err -> return $ Left err
 
+-- | Upload file content to Drive
+-- TODO: Fix field setters for gogol-drive 1.0 - need to use proper API
+uploadFileContent :: KnownScopes s => Env s -> FilePath -> T.Text -> FolderId -> IO (Either DriveError DriveFileId)
+uploadFileContent _env _localPath _fileName (FolderId _parentId) = do
+  -- Placeholder - will be fixed in Task 9
+  return $ Left $ NetworkError "uploadFileContent: Field setters need fixing for gogol-drive 1.0"
+
 -- | Upload file to Google Drive
 uploadFile :: DriveConfig -> AccessToken -> FilePath -> FilePath -> IO (Either DriveError DriveFileId)
 uploadFile config accessToken localPath drivePath = do
@@ -301,23 +308,30 @@ uploadFile config accessToken localPath drivePath = do
   if not exists
     then return $ Left $ FileNotFound localPath
     else do
-      -- Extract folder path and file name
-      let driveFolder = takeDirectory drivePath
-      let pathParts = splitDirectories drivePath
-      let fileName = if null pathParts then "" else last pathParts
-
-      -- Ensure folder exists
-      folderResult <- ensureFolderPath config accessToken driveFolder
-      case folderResult of
+      -- Setup
+      clientResult <- loadOAuthClient (driveConfigClientSecretPath config)
+      case clientResult of
         Left err -> return $ Left err
-        Right (FolderId parentId) -> do
-          -- For now, return a placeholder error since we need actual Google Drive API calls
-          -- In a real implementation, this would:
-          -- 1. Read file content from localPath
-          -- 2. Make multipart/related POST to Drive API v3
-          -- 3. Include file metadata (name, parents) and file content
-          -- 4. Return file ID from response
-          return $ Left $ NetworkError "File upload not yet implemented - requires Google Drive API integration"
+        Right client -> do
+          tokensResult <- loadTokens (driveConfigTokenPath config)
+          case tokensResult of
+            Left err -> return $ Left err
+            Right tokens -> do
+              let authUser = authorizedUserFromTokens tokens client
+              manager <- newManager tlsManagerSettings
+              env :: Env '[Drive'File] <- newDriveEnv authUser manager
+
+              -- Get folder path
+              let driveFolder = takeDirectory drivePath
+              let pathParts = splitDirectories drivePath
+              let fileName = if null pathParts then "" else last pathParts
+
+              -- Ensure folder exists
+              folderResult <- ensureFolderPath config accessToken driveFolder
+              case folderResult of
+                Left err -> return $ Left err
+                Right folderId ->
+                  uploadFileContent env localPath (T.pack fileName) folderId
 
 -- | Placeholder for initial OAuth authentication flow
 -- TODO: Implement in Task 2
