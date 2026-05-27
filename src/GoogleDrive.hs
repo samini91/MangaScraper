@@ -54,6 +54,7 @@ import Gogol.Auth
   , OAuthClient(..)
   , OAuthCode(..)
   , ClientId(..)
+  , GSecret(..)
   )
 import Gogol.Auth.InstalledApplication
   ( installedApplication
@@ -272,7 +273,27 @@ uploadFile config accessToken localPath drivePath = do
 performInitialAuth :: IO (Either DriveError Tokens)
 performInitialAuth = return $ Left $ AuthError "performInitialAuth not yet implemented"
 
--- | Placeholder for loading OAuth client configuration
--- TODO: Implement in Task 2
+-- | Load OAuth client credentials from client_secret.json
 loadOAuthClient :: FilePath -> IO (Either DriveError OAuthClient)
-loadOAuthClient _ = return $ Left $ AuthError "loadOAuthClient not yet implemented"
+loadOAuthClient path = do
+  exists <- doesFileExist path
+  if not exists
+    then return $ Left $ AuthError "Client secret file not found"
+    else do
+      result <- catch (Right <$> BL.readFile path) handleIOException
+      case result of
+        Left err -> return $ Left err
+        Right content -> do
+          case eitherDecode content of
+            Left err -> return $ Left $ AuthError ("Invalid client_secret.json: " ++ err)
+            Right (jsonValue :: Value) -> do
+              let installed = jsonValue ^? key "installed"
+              let clientId = installed >>= (^? key "client_id" . _String)
+              let clientSecret = installed >>= (^? key "client_secret" . _String)
+              case (clientId, clientSecret) of
+                (Just cid, Just csec) ->
+                  return $ Right $ OAuthClient (ClientId cid) (GSecret csec)
+                _ -> return $ Left $ AuthError "Missing client_id or client_secret in installed section"
+  where
+    handleIOException :: SomeException -> IO (Either DriveError BL.ByteString)
+    handleIOException e = return $ Left $ AuthError ("Failed to read client secret: " ++ show e)
