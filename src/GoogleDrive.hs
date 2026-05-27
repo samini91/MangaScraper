@@ -49,7 +49,6 @@ import Gogol
   , send
   , upload
   )
-import qualified Gogol.Auth as GA
 import Gogol.Auth
   ( Credentials(..)
   , OAuthClient(..)
@@ -72,6 +71,8 @@ import Gogol.Drive
   , newDriveFilesCreate
   , newFile
   )
+import Gogol.Drive.Files.Create
+import Gogol.Drive.Files.List
 import Gogol.Drive.Types
   ( File
   , file
