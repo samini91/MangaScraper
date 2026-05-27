@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
+{-# LANGUAGE DataKinds #-}
 
 module GoogleDrive
   ( DriveConfig(..)
@@ -86,7 +87,7 @@ import Gogol.Drive.Types
   , FileList
   )
 import Data.Proxy (Proxy(..))
-import Lens.Micro ((^?), (^.), (.~))
+import Lens.Micro ((&), (^?), (^.), (.~))
 import Data.Aeson.Lens (key, _String)
 
 -- | Configuration for Google Drive integration
@@ -224,17 +225,52 @@ getValidToken config = do
               return $ Right newAccessToken
         else return $ Right (tokensAccess tokens)
 
+-- | Search for folder by name under parent
+-- TODO: Fix field accessors for gogol-drive 1.0 - need to use proper API
+searchFolder :: KnownScopes s => Env s -> T.Text -> FolderId -> IO (Maybe FolderId)
+searchFolder _env _folderName (FolderId _parentId) = do
+  -- Placeholder - will be fixed in Task 9
+  return Nothing
+
+-- | Create new folder under parent
+-- TODO: Fix field setters for gogol-drive 1.0 - need to use proper API
+createFolderInParent :: KnownScopes s => Env s -> T.Text -> FolderId -> IO (Either DriveError FolderId)
+createFolderInParent _env _folderName (FolderId _parentId) = do
+  -- Placeholder - will be fixed in Task 9
+  return $ Left $ NetworkError "createFolderInParent: Field setters need fixing for gogol-drive 1.0"
+
 -- | Create folder hierarchy recursively
 createFolderHierarchy :: DriveConfig -> AccessToken -> FolderId -> [FilePath] -> IO (Either DriveError FolderId)
 createFolderHierarchy _ _ parentId [] = return $ Right parentId
-createFolderHierarchy config accessToken parentId (folderName:rest) = do
-  -- For now, return a placeholder error since we need actual Google Drive API calls
-  -- In a real implementation, this would:
-  -- 1. Search for folder with name under parentId
-  -- 2. If found, use that folder ID
-  -- 3. If not found, create new folder
-  -- 4. Recurse with remaining path components
-  return $ Left $ NetworkError "Folder creation not yet implemented - requires Google Drive API integration"
+createFolderHierarchy config (AccessToken _) parentId (folderName:rest) = do
+  -- 1. Load credentials and create env
+  clientResult <- loadOAuthClient (driveConfigClientSecretPath config)
+  case clientResult of
+    Left err -> return $ Left err
+    Right oauthClient -> do
+      tokensResult <- loadTokens (driveConfigTokenPath config)
+      case tokensResult of
+        Left err -> return $ Left err
+        Right toks -> do
+          let authUser = authorizedUserFromTokens toks oauthClient
+          manager <- newManager tlsManagerSettings
+          env :: Env '[Drive'File] <- newDriveEnv authUser manager
+
+          -- 2. Search for existing folder
+          existing <- searchFolder env (T.pack folderName) parentId
+
+          -- 3. Use existing or create new
+          folderIdResult <- case existing of
+            Just fid -> return $ Right fid
+            Nothing -> createFolderInParent env (T.pack folderName) parentId
+
+          -- 4. Recurse for remaining path components
+          case folderIdResult of
+            Left err -> return $ Left err
+            Right folderId ->
+              if null rest
+                then return $ Right folderId
+                else createFolderHierarchy config (AccessToken "") folderId rest
 
 -- | Ensure folder path exists in Google Drive, creating hierarchy as needed
 ensureFolderPath :: DriveConfig -> AccessToken -> FilePath -> IO (Either DriveError FolderId)
