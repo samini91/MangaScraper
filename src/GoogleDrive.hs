@@ -20,6 +20,8 @@ module GoogleDrive
   , uploadFile
   , performInitialAuth
   , loadOAuthClient
+  , authorizedUserFromTokens
+  , tokensFromOAuthToken
   ) where
 
 import GHC.Generics
@@ -62,6 +64,7 @@ import Gogol.Auth.InstalledApplication
   , AccessType(..)
   )
 import Gogol.Auth.ServiceAccount (authorizedUserToken, AuthorizedUser(..))
+import qualified Gogol.Types
 import Gogol.Drive
   ( Drive'File
   , DriveFilesList
@@ -297,3 +300,22 @@ loadOAuthClient path = do
   where
     handleIOException :: SomeException -> IO (Either DriveError BL.ByteString)
     handleIOException e = return $ Left $ AuthError ("Failed to read client secret: " ++ show e)
+
+-- | Convert custom Tokens and OAuthClient to gogol's AuthorizedUser
+authorizedUserFromTokens :: Tokens -> OAuthClient -> AuthorizedUser
+authorizedUserFromTokens (Tokens _ (RefreshToken refresh) _) (OAuthClient clientId clientSecret) =
+  AuthorizedUser
+    { _userId = clientId
+    , _userSecret = clientSecret
+    , _userRefresh = Gogol.Types.RefreshToken refresh
+    }
+
+-- | Convert gogol's tokens to custom Tokens
+-- Takes access token text, optional refresh token text, and expiry time
+tokensFromOAuthToken :: T.Text -> Maybe T.Text -> UTCTime -> Tokens
+tokensFromOAuthToken accessToken maybeRefresh expiry =
+  Tokens
+    { tokensAccess = AccessToken accessToken
+    , tokensRefresh = RefreshToken (maybe "" id maybeRefresh)
+    , tokensExpiry = expiry
+    }
