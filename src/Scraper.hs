@@ -39,7 +39,7 @@ instance Exception MangaSiteNotFoundException
 
 instance ToLogStr SomeException where
   toLogStr :: SomeException -> LogStr
-  toLogStr x = toLogStr $ show x
+  toLogStr x = toLogStr $ Prelude.show x
 
 timeout :: forall a. WD a -> WD (Either SomeException a)
 timeout x = do
@@ -104,7 +104,7 @@ grabPageRemoveRedundancy env x =
   where
     listOfComps = repeat (mapErr x)
     mapErr :: Url -> ExceptT String IO (MangaWebSite, Text)
-    mapErr x = withExceptT (\x -> show x) (grabPageWithRetryMaybe x)
+    mapErr x = withExceptT (\x -> Prelude.show x) (grabPageWithRetryMaybe x)
 
 grabPageWithRetryMaybe :: Url ->  ExceptT SomeException IO (MangaWebSite, T.Text)
 grabPageWithRetryMaybe x = mapRetry
