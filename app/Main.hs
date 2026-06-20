@@ -13,11 +13,9 @@ import Data.Time.Clock (getCurrentTime, addUTCTime)
 import Control.Monad.Catch (try, SomeException)
 import Network.HTTP.Client (newManager)
 import Network.HTTP.Client.TLS (tlsManagerSettings)
-import Gogol.Auth (OAuthCode(..), OAuthClient(..), OAuthToken(..))
-import Gogol.Auth.InstalledApplication (formAccessTypeURL, AccessType(..), exchangeCode)
-import Gogol.Drive (Drive'File)
-import Data.Proxy (Proxy(..))
-import qualified Gogol.Types
+import Network.Google.Auth (OAuthCode(..), OAuthClient(..), OAuthToken(..))
+import Network.Google.Auth.InstalledApplication (formURL, AccessType(..), exchangeCode)
+import Network.Google.Drive (driveFileScope)
 import qualified System.Info
 import qualified System.Process
 
@@ -51,7 +49,7 @@ runAuthSetup = do
 
     Right client -> do
       -- 2. Generate authorization URL
-      let url = formAccessTypeURL client Offline (Proxy :: Proxy '[Drive'File])
+      let url = formURL client [driveFileScope]
 
       putStrLn "Opening browser for authorization..."
       putStrLn $ "URL: " ++ T.unpack url
@@ -67,7 +65,7 @@ runAuthSetup = do
       codeText <- T.strip <$> T.getLine
 
       -- 4. Exchange code for tokens
-      let oauthCode = OAuthCode codeText :: OAuthCode '[Drive'File]
+      let oauthCode = OAuthCode codeText
 
       -- 5. Get initial token
       manager <- newManager tlsManagerSettings
@@ -87,20 +85,8 @@ runAuthSetup = do
           exitFailure
 
         Right oauthToken -> do
-          -- 6. Extract and save tokens
-          now <- getCurrentTime
-          let expiry = addUTCTime 3600 now  -- 1 hour from now
-          let accessText = case oauthToken of
-                OAuthToken (Gogol.Types.AccessToken at) _ _ -> at
-          let refreshText = case oauthToken of
-                OAuthToken _ (Just (Gogol.Types.RefreshToken rt)) _ -> rt
-                OAuthToken _ Nothing _ -> ""
-
-          let tokens = GD.Tokens
-                { GD.tokensAccess = GD.AccessToken accessText
-                , GD.tokensRefresh = GD.RefreshToken refreshText
-                , GD.tokensExpiry = expiry
-                }
+          -- 6. Extract and save tokens using helper function
+          let tokens = GD.tokensFromOAuthToken oauthToken
 
           let tokenPath = home </> ".mangascraper/google_tokens.json"
           -- Ensure directory exists

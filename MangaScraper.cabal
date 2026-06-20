@@ -57,9 +57,9 @@ library
                      , fast-logger
                      , zip-archive
                      , filepath
-                     , gogol >= 1.0 && < 1.1
-                     , gogol-core >= 1.0 && < 1.1
-                     , gogol-drive >= 1.0 && < 1.1
+                     , gogol >= 0.5 && < 1.1
+                     , gogol-core >= 0.5 && < 1.1
+                     , gogol-drive >= 0.5 && < 1.1
                      , time
                      , resourcet
                      , process

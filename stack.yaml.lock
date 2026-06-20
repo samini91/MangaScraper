@@ -5,26 +5,26 @@
 
 packages:
 - completed:
-    hackage: gogol-1.0.0.0@sha256:b711299083a7790e15b82c3088cfe42f71849174a738e892e6e89a3f6bcf0592,3035
+    hackage: gogol-0.5.0@sha256:01b38acf97ae0afb2465935fee1bebce03c1b84e629cf0887467be7ae361f0a7,3222
     pantry-tree:
-      sha256: bf5036ea6a715dad6fd8cc125e0251509ef5d1ad600f3da4e5367e3cfb25ad2a
-      size: 1148
+      sha256: ab472e169f12b97837cdfca2262b2d6fb569ae17876cbc10e97186944a401866
+      size: 1243
   original:
-    hackage: gogol-1.0.0.0
+    hackage: gogol-0.5.0
 - completed:
-    hackage: gogol-core-1.0.0.0@sha256:da273f1596ab73930c7a2036c400295c955e71ff5ab0d460ce1e0207d9849894,2514
+    hackage: gogol-core-0.5.0@sha256:d4efdd3070fe3a9af49a612b068fc046c927981d00ba22aa1f434009a886d64c,2938
     pantry-tree:
-      sha256: d4807863d39a5f5d8d04b3358d247536aed033ccfff346ea5678295387277662
-      size: 521
+      sha256: e29911adc9223be0a5e82fc1ecbe9883d6fe12a5870e8c06896e1459adebd7b6
+      size: 686
   original:
-    hackage: gogol-core-1.0.0.0
+    hackage: gogol-core-0.5.0
 - completed:
-    hackage: gogol-drive-1.0.0@sha256:024e9dafb9d19607231ea64410d422e1ec5a4e8a8248b83704dd7d983d8aed4f,3500
+    hackage: gogol-drive-0.5.0@sha256:1b1a15da699a09cbfe42e1bf297f6439c8f32403efcca417667d384ca1cb3c9d,3991
     pantry-tree:
-      sha256: fa82e980c796a2005052af02bca234c9b90aa2890d9c8798e2b3acbd1613c6bf
-      size: 4836
+      sha256: d4d24b495c699a6fca539f652de5e130529ad348360370f02390f63496dc7952
+      size: 4784
   original:
-    hackage: gogol-drive-1.0.0
+    hackage: gogol-drive-0.5.0
 - completed:
     hackage: base64-1.0@sha256:7f92c1268e6fa191b41abab53313201644af756f3fdd7e99edf3c875e6ba02a4,2904
     pantry-tree:
@@ -32,6 +32,20 @@ packages:
       size: 2229
   original:
     hackage: base64-1.0@sha256:7f92c1268e6fa191b41abab53313201644af756f3fdd7e99edf3c875e6ba02a4,2904
+- completed:
+    hackage: x509-1.7.7@sha256:90eef2d745a654146fc1c325e035eaddac531e4d2145d4bc1dcf4b8fad439d34,2276
+    pantry-tree:
+      sha256: d81ffd09633c0417bcedbfc29f870cc843ec0750edd2f73c8fd60a5e5df278d2
+      size: 1124
+  original:
+    hackage: x509-1.7.7@sha256:90eef2d745a654146fc1c325e035eaddac531e4d2145d4bc1dcf4b8fad439d34,2276
+- completed:
+    hackage: x509-store-1.6.9@sha256:1f1abeab5bacf1407b920d0f34f4c35a5ad450ff0d8121cd3dc76460f81e711d,1716
+    pantry-tree:
+      sha256: 9fc5a6a997af3569c79d5062534cc9836721b39df86bef56308f209164ab500d
+      size: 398
+  original:
+    hackage: x509-store-1.6.9@sha256:1f1abeab5bacf1407b920d0f34f4c35a5ad450ff0d8121cd3dc76460f81e711d,1716
 snapshots:
 - completed:
     sha256: 3c412a7c13dba6d3d808455a458e0776c58b6cf99b8a7961a2f5e55589d6f1d6

@@ -35,7 +35,6 @@ import System.FilePath ((</>), takeDirectory, splitDirectories)
 import Control.Exception (SomeException)
 import qualified Data.Map.Strict as Map
 import Data.IORef
-import Gogol.Auth.TokenFile
 import qualified Data.ByteString as BS
 import Control.Monad (void)
 import Control.Monad.Catch (catch, throwM, try)
@@ -46,45 +45,48 @@ import System.Exit (ExitCode(..))
 import System.IO (hFlush, stdout)
 import Network.HTTP.Client (Manager, newManager)
 import Network.HTTP.Client.TLS (tlsManagerSettings)
-import Gogol
+import Network.Google
   ( Env
   , newEnv
-  , newEnvWith
   , send
   , upload
+  , toBody
   )
-import Gogol.Auth
+import Network.Google.Auth
   ( Credentials(..)
   , OAuthClient(..)
   , OAuthCode(..)
-  , ClientId(..)
-  , GSecret(..)
   , OAuthToken(..)
+  , ClientId(..)
+  , ClientSecret(..)
+  , _tokenAccess
+  , _tokenRefresh
+  , _tokenExpiry
   )
-import Gogol.Auth.InstalledApplication
+import qualified Network.Google.Auth
+import Network.Google.Auth.InstalledApplication
   ( installedApplication
-  , formAccessTypeURL
+  , formURL
   , AccessType(..)
+  , exchangeCode
   )
-import Gogol.Auth.ServiceAccount (authorizedUserToken, AuthorizedUser(..))
-import Gogol.Auth.Scope (KnownScopes)
-import qualified Gogol.Types
-import Gogol.Drive
-  ( Drive'File
-  , DriveFilesList
-  , DriveFilesCreate
-  , File
-  , FileList
-  , newDriveFilesList
-  , newDriveFilesCreate
-  , newFile
-  )
-import Gogol.Drive.Files.Create
-import Gogol.Drive.Files.List
-import Gogol.Drive.Types
-  ( File
+import Network.Google.Auth.ServiceAccount (authorizedUser, AuthorizedUser(..))
+import Network.Google.Drive
+  ( DriveScopes
+  , filesList
+  , filesCreate
   , file
+  )
+import Network.Google.Drive.Types
+  ( File
   , FileList
+  , flFiles
+  , flQ
+  , flPageSize
+  , fId
+  , fName
+  , fMimeType
+  , fParents
   )
 import Data.Proxy (Proxy(..))
 import Lens.Micro ((&), (^?), (^.), (.~))
@@ -226,7 +228,7 @@ getValidToken config = do
         else return $ Right (tokensAccess tokens)
 
 -- | Search for folder by name under parent
-searchFolder :: KnownScopes s => Env s -> T.Text -> FolderId -> IO (Maybe FolderId)
+searchFolder :: Env -> T.Text -> FolderId -> IO (Maybe FolderId)
 searchFolder env folderName (FolderId parentId) = do
   let query = T.concat
         [ "name = '", folderName, "'"
@@ -235,22 +237,24 @@ searchFolder env folderName (FolderId parentId) = do
         , " and trashed = false"
         ]
 
-  response <- runResourceT $ send env
-    (newDriveFilesList & flQ .~ Just query & flPageSize .~ Just 1)
+  let request = filesList
+        & flQ .~ Just query
+        & flPageSize .~ Just 1
+  response <- runResourceT $ send env request
 
   case response ^. flFiles of
     Just (file:_) -> return $ fmap (FolderId . T.unpack) (file ^. fId)
     _ -> return Nothing
 
 -- | Create new folder under parent
-createFolderInParent :: KnownScopes s => Env s -> T.Text -> FolderId -> IO (Either DriveError FolderId)
+createFolderInParent :: Env -> T.Text -> FolderId -> IO (Either DriveError FolderId)
 createFolderInParent env folderName (FolderId parentId) = catchDriveErrors $ do
-  let metadata = newFile
+  let metadata = file
         & fName .~ Just folderName
         & fMimeType .~ Just "application/vnd.google-apps.folder"
         & fParents .~ Just [T.pack parentId]
 
-  created <- runResourceT $ send env (newDriveFilesCreate metadata)
+  created <- runResourceT $ send env (filesCreate metadata)
 
   case created ^. fId of
     Just fileId -> return $ FolderId (T.unpack fileId)
@@ -271,7 +275,7 @@ createFolderHierarchy config (AccessToken _) parentId (folderName:rest) = do
         Right toks -> do
           let authUser = authorizedUserFromTokens toks oauthClient
           manager <- newManager tlsManagerSettings
-          env :: Env '[Drive'File] <- newDriveEnv authUser manager
+          env <- newDriveEnv authUser manager
 
           -- 2. Search for existing folder
           existing <- searchFolder env (T.pack folderName) parentId
@@ -311,22 +315,19 @@ ensureFolderPath config accessToken path = do
         Left err -> return $ Left err
 
 -- | Upload file content to Drive
-uploadFileContent :: KnownScopes s => Env s -> FilePath -> T.Text -> FolderId -> IO (Either DriveError DriveFileId)
+uploadFileContent :: Env -> FilePath -> T.Text -> FolderId -> IO (Either DriveError DriveFileId)
 uploadFileContent env localPath fileName (FolderId parentId) = catchDriveErrors $ do
   -- 1. Read file content
   fileContent <- BS.readFile localPath
 
   -- 2. Create metadata
-  let metadata = newFile
+  let metadata = file
         & fName .~ Just fileName
         & fParents .~ Just [T.pack parentId]
         & fMimeType .~ Just "application/x-cbz"
 
   -- 3. Upload with multipart
-  let body = Gogol.Types.sourceBody fileContent
-
-  uploaded <- runResourceT $ upload env
-    (newDriveFilesCreate metadata & body)
+  uploaded <- runResourceT $ upload env (filesCreate metadata) (toBody fileContent)
 
   -- 4. Extract file ID
   case uploaded ^. fId of
@@ -352,7 +353,7 @@ uploadFile config accessToken localPath drivePath = do
             Right tokens -> do
               let authUser = authorizedUserFromTokens tokens client
               manager <- newManager tlsManagerSettings
-              env :: Env '[Drive'File] <- newDriveEnv authUser manager
+              env <- newDriveEnv authUser manager
 
               -- Get folder path
               let driveFolder = takeDirectory drivePath
@@ -407,20 +408,29 @@ authorizedUserFromTokens (Tokens _ (RefreshToken refresh) _) (OAuthClient client
 
 -- | Convert gogol's tokens to custom Tokens
 -- Takes access token text, optional refresh token text, and expiry time
-tokensFromOAuthToken :: T.Text -> Maybe T.Text -> UTCTime -> Tokens
-tokensFromOAuthToken accessToken maybeRefresh expiry =
+tokensFromOAuthToken :: OAuthToken -> Tokens
+tokensFromOAuthToken oauthToken =
   Tokens
-    { tokensAccess = AccessToken accessToken
-    , tokensRefresh = RefreshToken (maybe "" id maybeRefresh)
-    , tokensExpiry = expiry
+    { tokensAccess = accessTokenFromGogol (_tokenAccess oauthToken)
+    , tokensRefresh = maybe (RefreshToken "") refreshTokenFromGogol (_tokenRefresh oauthToken)
+    , tokensExpiry = _tokenExpiry oauthToken
     }
 
+-- Helper to convert from gogol's AccessToken to our custom AccessToken
+accessTokenFromGogol :: Network.Google.Auth.AccessToken -> AccessToken
+accessTokenFromGogol (Network.Google.Auth.AccessToken txt) = AccessToken txt
+
+-- Helper to convert from gogol's RefreshToken to our custom RefreshToken
+refreshTokenFromGogol :: Network.Google.Auth.RefreshToken -> RefreshToken
+refreshTokenFromGogol (Network.Google.Auth.RefreshToken txt) = RefreshToken txt
+
 -- | Create Google Drive API environment from credentials
-newDriveEnv :: KnownScopes s => AuthorizedUser -> Manager -> IO (Env s)
+newDriveEnv :: AuthorizedUser -> Manager -> IO Env
 newDriveEnv authUser manager = do
   let credentials = FromUser authUser
-  let logger = \_ _ -> return ()
-  newEnvWith credentials logger manager
+  let logger _ _ = return ()
+  env <- newEnvWith credentials logger manager
+  return env
 
 -- | Catch Drive API exceptions and convert to DriveError
 catchDriveErrors :: IO a -> IO (Either DriveError a)

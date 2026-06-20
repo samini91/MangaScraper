@@ -25,6 +25,13 @@ system-ghc: true
 nix:
   enable: false
 
+allow-newer: true
+allow-newer-deps:
+  - gogol
+  - gogol-core
+  - gogol-drive
+  - aeson
+
 # User packages to be built.
 # Various formats can be used as shown in the example below.
 #
@@ -44,10 +51,12 @@ packages:
 # using the same syntax as the packages field.
 # (e.g., acme-missiles-0.3)
 extra-deps:
-  - gogol-1.0.0.0
-  - gogol-core-1.0.0.0
-  - gogol-drive-1.0.0
+  - gogol-0.5.0
+  - gogol-core-0.5.0
+  - gogol-drive-0.5.0
   - base64-1.0@sha256:7f92c1268e6fa191b41abab53313201644af756f3fdd7e99edf3c875e6ba02a4,2904
+  - x509-1.7.7@sha256:90eef2d745a654146fc1c325e035eaddac531e4d2145d4bc1dcf4b8fad439d34,2276
+  - x509-store-1.6.9@sha256:1f1abeab5bacf1407b920d0f34f4c35a5ad450ff0d8121cd3dc76460f81e711d,1716
 
 # Override default flag values for local packages and extra-deps
 # flags: {}
