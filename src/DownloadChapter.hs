@@ -38,6 +38,7 @@ import qualified Codec.Archive.Zip as Zip
 import Control.Monad (foldM, when)
 import qualified GoogleDrive as GD
 
+-- need to add download path here too for upload?
 download :: Env -> DownloadChapterRequest -> IO DownloadInfo
 download env u = do
   m <- grabPageRemoveRedundancy env (getMangaWebSiteUrl (link u))

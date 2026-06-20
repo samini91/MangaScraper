@@ -226,18 +226,35 @@ getValidToken config = do
         else return $ Right (tokensAccess tokens)
 
 -- | Search for folder by name under parent
--- TODO: Fix field accessors for gogol-drive 1.0 - need to use proper API
 searchFolder :: KnownScopes s => Env s -> T.Text -> FolderId -> IO (Maybe FolderId)
-searchFolder _env _folderName (FolderId _parentId) = do
-  -- Placeholder - will be fixed in Task 9
-  return Nothing
+searchFolder env folderName (FolderId parentId) = do
+  let query = T.concat
+        [ "name = '", folderName, "'"
+        , " and mimeType = 'application/vnd.google-apps.folder'"
+        , " and '", T.pack parentId, "' in parents"
+        , " and trashed = false"
+        ]
+
+  response <- runResourceT $ send env
+    (newDriveFilesList & flQ .~ Just query & flPageSize .~ Just 1)
+
+  case response ^. flFiles of
+    Just (file:_) -> return $ fmap (FolderId . T.unpack) (file ^. fId)
+    _ -> return Nothing
 
 -- | Create new folder under parent
--- TODO: Fix field setters for gogol-drive 1.0 - need to use proper API
 createFolderInParent :: KnownScopes s => Env s -> T.Text -> FolderId -> IO (Either DriveError FolderId)
-createFolderInParent _env _folderName (FolderId _parentId) = do
-  -- Placeholder - will be fixed in Task 9
-  return $ Left $ NetworkError "createFolderInParent: Field setters need fixing for gogol-drive 1.0"
+createFolderInParent env folderName (FolderId parentId) = catchDriveErrors $ do
+  let metadata = newFile
+        & fName .~ Just folderName
+        & fMimeType .~ Just "application/vnd.google-apps.folder"
+        & fParents .~ Just [T.pack parentId]
+
+  created <- runResourceT $ send env (newDriveFilesCreate metadata)
+
+  case created ^. fId of
+    Just fileId -> return $ FolderId (T.unpack fileId)
+    Nothing -> throwM $ userError "Failed to get folder ID from response"
 
 -- | Create folder hierarchy recursively
 createFolderHierarchy :: DriveConfig -> AccessToken -> FolderId -> [FilePath] -> IO (Either DriveError FolderId)
@@ -294,11 +311,27 @@ ensureFolderPath config accessToken path = do
         Left err -> return $ Left err
 
 -- | Upload file content to Drive
--- TODO: Fix field setters for gogol-drive 1.0 - need to use proper API
 uploadFileContent :: KnownScopes s => Env s -> FilePath -> T.Text -> FolderId -> IO (Either DriveError DriveFileId)
-uploadFileContent _env _localPath _fileName (FolderId _parentId) = do
-  -- Placeholder - will be fixed in Task 9
-  return $ Left $ NetworkError "uploadFileContent: Field setters need fixing for gogol-drive 1.0"
+uploadFileContent env localPath fileName (FolderId parentId) = catchDriveErrors $ do
+  -- 1. Read file content
+  fileContent <- BS.readFile localPath
+
+  -- 2. Create metadata
+  let metadata = newFile
+        & fName .~ Just fileName
+        & fParents .~ Just [T.pack parentId]
+        & fMimeType .~ Just "application/x-cbz"
+
+  -- 3. Upload with multipart
+  let body = Gogol.Types.sourceBody fileContent
+
+  uploaded <- runResourceT $ upload env
+    (newDriveFilesCreate metadata & body)
+
+  -- 4. Extract file ID
+  case uploaded ^. fId of
+    Just fileId -> return $ DriveFileId (T.unpack fileId)
+    Nothing -> throwM $ userError "Failed to get file ID from upload response"
 
 -- | Upload file to Google Drive
 uploadFile :: DriveConfig -> AccessToken -> FilePath -> FilePath -> IO (Either DriveError DriveFileId)
